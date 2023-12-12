@@ -2,7 +2,7 @@
 ## Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 ## Creation Date: Tue Dec 12 12:53:08 PST 2023
 ## Last Modified: Tue Dec 12 12:53:14 PST 2023
-## Filename:      ...data-server-jrp/cgi-bin/Makefile
+## Filename:      ...jrp-data-server/cgi-bin/Makefile
 ## Syntax:        GNU makefile
 ##
 ## Description: This Makefile automates cgi-bin script installation.
@@ -11,13 +11,13 @@
 CGIBIN = /var/www/cgi-bin
 
 all:
-	rm $(CGIBIN)/data-server-jrp
-	cp data-server-jrp.pl $(CGIBIN)/data-server-jrp
-	chmod 0755	$(CGIBIN)/data-server-jrp
+	-rm $(CGIBIN)/jrp-data-server
+	cp jrp-data-server.pl $(CGIBIN)/jrp-data-server
+	chmod 0755	$(CGIBIN)/jrp-data-server
 
 selinux:
-	semanage fcontext -a -t httpd_sys_script_exec_t /var/www/cgi-bin/data-server-jrp
-	restorecon /var/www/cgi-bin/data-server-jrp
+	semanage fcontext -a -t httpd_sys_script_exec_t /var/www/cgi-bin/jrp-data-server
+	restorecon /var/www/cgi-bin/jrp-data-server
 
 
 

@@ -3,7 +3,7 @@
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Sun 12 Sep 2021 07:37:36 PM PDT
 # Last Modified: Mon 05 Sep 2022 05:09:02 AM PDT
-# Filename:      data-server-jrp/cgi-bin/data-server-jrp.pl
+# Filename:      jrp-data-server/cgi-bin/jrp-data-server.pl
 # Syntax:        perl 5
 # vim:           ts=3
 #
@@ -11,10 +11,9 @@
 #
 # Formats that the server can deal with:
 #    Indexing resources:
-#       popc2-browse-index.json  == POPC-2 browse search index in JSON format.
-#       popc2-browse-index.aton  == POPC-2 browse search index in ATON format.
+#       jrp-index.json  == JRP browse search index in JSON format.
 #    Search indexes:
-#       popc2-lyrics-index.txt   == POPC-2 lyrics search index in TXT format.
+#       jrp-lyrics-index.txt   == lyrics search index in TXT format.
 #       pitch.thema == Melodic pitch search index (all works).
 #    Quasi-score ids:
 #       random    ==  Get random score from cache.
@@ -33,12 +32,12 @@
 #          https://data.josqu.in/Jos2721.incipit
 #    Dynamically generated formats:
 #       lyrics    == Extract lyrics HTML page
-#          https://data.josqu.in/18xx:100.lyrics
-#          https://data.josqu.in/18xx:100.lyrics-modern
+#          https://data.josqu.in/Jos2721.lyrics
+#          https://data.josqu.in/Jos2721.lyrics-modern
 #       info-aton == Basic metadata about the file in ATON format.
-#          https://data.josqu.in/18xx:100.aton
+#          https://data.josqu.in/Jos2721.aton
 #       info-json == Basic metadata about the file in JSON format.
-#          https://data.josqu.in/18xx:100.json
+#          https://data.josqu.in/Jos2721.json
 #    Debug items:
 #       test     == Print environmental variables.
 #
