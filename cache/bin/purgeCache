@@ -1,0 +1,184 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun Sep 12 10:43:54 PDT 2021
+# Last Modified: Fri 17 Sep 2021 07:03:07 AM PDT
+# Filename:      cache/bin/purgeCache
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Remove old cache entries from cache.
+#
+# Options:
+#
+# -u          == Unpurge directories in purge area.
+# -i index    == Index file to check for directories
+#                that need to be purged.
+# -p dir      == Directory to place purged cache directories.
+#
+
+use strict;
+use Getopt::Long;
+use File::Copy;
+use File::Path;
+
+my $indexfile;
+my $purgedir;
+my $undoQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+	"u|undo"     => \$undoQ,
+	"i|index"    => \$indexfile,
+	"p|purgedir" => \$purgedir
+);
+
+$purgedir = "purged" if $purgedir =~ /^\s*$/;
+die "ERROR $purgedir is empty" if $purgedir =~ /^\s*$/;
+die "ERROR $purgedir is invalid" if $purgedir =~ /^[.\/]+/;
+
+$indexfile = "cache-index.hmd" if $indexfile =~ /^\s*$/;
+
+my %index = getIndex($indexfile);
+
+# Cache depth (number of subdirectory levels until file directories).
+my $cacheDepth = 1;
+$cacheDepth = 1 if $cacheDepth < 1;
+$cacheDepth = 1 if $cacheDepth > 3;
+
+my $groups = "0123456789abcdef";
+my @dirs = split(//, $groups);
+
+if ($undoQ) {
+	unpurge();
+} else {
+	foreach my $dir (@dirs) {
+		purgeDirectory($dir);
+	}
+}
+
+
+exit(0);
+
+
+##########################################################################
+
+
+##############################
+##
+## unpurge -- Move entries in the purged directory back into the cache
+##     (if there is not already a directory for it present in the cache).
+##
+
+sub unpurge {
+	my @purged = glob("$purgedir/*");
+	foreach my $purgeEntry (@purged) {
+		next if $purgeEntry !~ /\/([0-9a-f]{8})$/;
+		my $id = $1;
+		my $basedir = getTargetDir($id, $cacheDepth);
+		if (-d $basedir) {
+			print STDERR "Skiping $id since it is already in the cache\n";
+			next;
+		}
+		print STDERR "Moving $purgeEntry to $basedir\n";
+		`mv "$purgeEntry" "$basedir"`;
+	}
+}
+
+
+
+##############################
+##
+## purgeDirectory --
+##
+
+sub purgeDirectory {
+	my ($basedir) = @_;
+	return if !-d $basedir;
+	my @subdirs;
+	my @md5dirs;
+	opendir(DIR, $basedir) or die "Cannot read $basedir\n";
+	while (my $file = readdir(DIR)) {
+		next if $file =~ /^\./;
+		next if !-d "$basedir/$file";
+		if ($file =~ /^[0-9a-f]$/) {
+			$subdirs[@subdirs] = $file;
+		} elsif ($file =~ /^[0-9a-f]{8}$/) {
+			$md5dirs[@md5dirs] = $file;
+		}
+	}
+	foreach my $dir (sort @md5dirs) {
+		if ($index{$dir} =~ /^\s*$/) {
+			# orphaned cached entry
+			if (-d "$purgedir/$dir") {
+				print "Deleting old purged file $purgedir/$dir\n";
+				rmtree("$purgedir/$dir") or die "Cannot delete $purgedir/$dir\n";
+			}
+			print "Moving $basedir/$dir to $purgedir\n";
+			`mv "$basedir/$dir" "$purgedir"`;
+			# move("$basedir/$dir", $purgedir);
+		}
+	}
+	foreach my $dir (sort @subdirs) {
+		purgeDirectory("$basedir/$dir");
+	}
+}
+
+
+##############################
+##
+## getIndex --
+##
+
+sub getIndex {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $fileidIndex = -1;
+	my $exinterp = 0;
+	my %output;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index = $j if $fields[$j] eq "**md5";
+				$fileidIndex = $j if $fields[$j] eq "**fileid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		$output{$fields[$md5Index]} = $fields[$fileidIndex];
+	}
+	return %output;
+}
+
+
+
+##############################
+##
+## getTargetDir --
+##
+
+sub getTargetDir {
+	my ($md5, $cacheDepth) = @_;
+	return $md5 if $cacheDepth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$cacheDepth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+

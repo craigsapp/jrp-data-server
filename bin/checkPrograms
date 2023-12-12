@@ -1,0 +1,415 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Thu 23 Sep 2021 06:44:02 PM PDT
+# Last Modified: Sat Aug 13 20:25:19 CEST 2022
+# Filename:      bin/checkPrograms
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Check that programes necessary for use in preparing the cache
+#                are available in the terminal.
+#
+
+use strict;
+use Getopt::Long;
+
+my $verboseQ = 0;
+
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'v|verbose' => \$verboseQ
+);
+
+
+##############################
+##
+## aton2json -- Needed for various cache indexes.
+##
+
+my $aton2json = `which aton2json`;
+chomp $aton2json;
+if ($aton2json =~ /^\s*$/) {
+	print "aton2json\t\tMISSING.  Install ATON with npm:\n";
+	print "\tInstalling aton2json in fedora:\n";
+	print "\tsudo dnf install npm -y\n";
+	print "\tsudo npm install -g aton\n";
+	print "\tsudo npm install -g posix-argv-parser\n";
+	print "\tsudo cp /usr/local/lib/node_modules/aton/example/cli/* /usr/local/bin\n";
+} elsif ($verboseQ) {
+	print "aton2json\t\tINSTALLED:\t$aton2json\n";
+}
+my $atondata = `echo "\@A:a" | $aton2json`;
+chomp $atondata;
+if ($atondata ne '{"A":"a"}') {
+	print "Problem running atonjson\n";
+	print "\tEXPECTING {\"A\":\"a\"}\n";
+	print "\tBUT GOT $atondata\n";
+	print "\tMODULE PATH IS: $ENV{'NODE_PATH'}\n";
+}
+
+
+
+##############################
+##
+## autostem -- Used for creating automatic stem directions.
+##
+
+my $autostem = `which autostem`;
+chomp $autostem;
+if ($autostem =~ /^\s*$/) {
+	print "autostem\t\tMISSING. Install humlib\n";
+} elsif ($verboseQ) {
+	print "autostem\t\tINSTALLED:\t$autostem\n";
+}
+
+
+
+##############################
+##
+## chord -- Used for creating pitch search index.
+##
+
+my $chord = `which chord`;
+chomp $chord;
+if ($chord =~ /^\s*$/) {
+	print "chord\t\t\tMISSING. Install humlib\n";
+} elsif ($verboseQ) {
+	print "chord\t\t\tINSTALLED:\t$chord\n";
+}
+
+
+
+##############################
+##
+## convert -- Image processing software needed for creating keyscapes.
+##
+
+my $convert = `which convert`;
+chomp $convert;
+if ($convert =~ /^\s*$/) {
+	print "convert\t\tMISSING. Install ImageMagick\n";
+} elsif ($verboseQ) {
+	print "convert\t\t\tINSTALLED:\t$convert\n";
+}
+
+
+
+##############################
+##
+## extractx -- Extract spines from Humdrum files.
+##
+
+my $extractx = `which extractx`;
+chomp $extractx;
+if ($extractx =~ /^\s*$/) {
+	print "extractx\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "extractx\t\tINSTALLED:\t$extractx\n";
+}
+
+
+
+##############################
+##
+## gzip -- Needed for GZIP compression of MEI and MusicXML files in cache.
+##
+
+my $gzip = `which gzip`;
+chomp $gzip;
+if ($gzip =~ /^\s*$/) {
+	print "gzip\t\tMISSING\n";
+} elsif ($verboseQ) {
+	print "gzip\t\t\tINSTALLED:\t$gzip\n";
+}
+
+
+
+##############################
+##
+## hum2mid -- Humdrum to MIDI converter from humextra.
+##
+
+my $hum2mid = `which hum2mid`;
+chomp $hum2mid;
+if ($hum2mid =~ /^\s*$/) {
+	print "hum2mid\t\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "hum2mid\t\t\tINSTALLED:\t$hum2mid\n";
+}
+
+
+
+##############################
+##
+## hum2muse -- Used for creating automatic stem directions.
+##
+
+my $hum2muse = `which hum2muse`;
+chomp $hum2muse;
+if ($hum2muse =~ /^\s*$/) {
+	print "hum2muse\t\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "hum2muse\t\tINSTALLED:\t$hum2muse\n";
+}
+
+
+
+##############################
+##
+## humcat -- Humdrum catting program from humextra.
+##
+
+my $humcat = `which humcat`;
+chomp $humcat;
+if ($humcat =~ /^\s*$/) {
+	print "humcat\t\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "humcat\t\t\tINSTALLED:\t$humcat\n";
+}
+
+
+
+##############################
+##
+## humdrum2musicxml -- Humdrum to MusicXML converter from cache/bin.
+##
+
+my $humdrum2musicxml = `which humdrum2musicxml`;
+chomp $humdrum2musicxml;
+if ($humdrum2musicxml =~ /^\s*$/) {
+	print "humdrum2musicxml\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "humdrum2musicxml\tINSTALLED:\t$humdrum2musicxml\n";
+}
+
+
+
+##############################
+##
+## humtr -- Humdrum character translations.
+##
+
+my $humtr = `which humtr`;
+chomp $humtr;
+if ($humtr =~ /^\s*$/) {
+	print "humtr\t\t\tMISSING. Install humlib\n";
+} elsif ($verboseQ) {
+	print "humtr\t\t\tINSTALLED:\t$humtr\n";
+}
+
+
+
+##############################
+##
+## lyrics -- Extract lyrics from Humdrum scores.
+##
+
+my $lyrics = "cache/bin/lyrics";
+if (!-r $lyrics) {
+	print "lyrics\t\t\tMISSING.\n";
+} elsif ($verboseQ) {
+	print "lyrics\t\t\tINSTALLED:\t$lyrics\n";
+}
+
+
+
+##############################
+##
+## md5sum/md5 -- Needed for creating checksums.
+##   On macOS the program is called md5, while
+##   in linux it is called md5sum.
+##
+
+my $md5sum = `which md5 2> /dev/null`;
+chomp $md5sum;
+if ($md5sum =~ /^\s*$/) {
+   $md5sum = `which md5sum`;
+   chomp $md5sum;
+}
+if ($md5sum =~ /^\s*$/) {
+	print "md5sum\t\t\tMISSING.\n";
+} elsif ($verboseQ) {
+	print "md5sum\t\t\tINSTALLED:\t$md5sum\n";
+}
+
+
+
+##############################
+##
+## mkeyscape -- Needed for creating keyscapes.
+##
+
+my $mkeyscape = `which mkeyscape`;
+chomp $mkeyscape;
+if ($mkeyscape =~ /^\s*$/) {
+	print "mkeyscape\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "mkeyscape\t\tINSTALLED:\t$mkeyscape\n";
+}
+
+
+
+##############################
+##
+## notecount -- Needed for counting notes.
+##
+
+my $notecount = `which notecount`;
+chomp $notecount;
+if ($notecount =~ /^\s*$/) {
+	print "notecount\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "notecount\t\tINSTALLED:\t$notecount\n";
+}
+
+
+
+##############################
+##
+## perl -- Needed for PERL scripts.
+##
+
+my $perl = "/usr/bin/perl";
+if (!-r $perl) {
+	print "perl\t\tMISSING.  This is strange, perl should already be install but might be in a different location.\n";
+} elsif ($verboseQ) {
+	print "perl\t\t\tINSTALLED:\t$perl\n";
+}
+
+
+
+##############################
+##
+## pmx2svg -- Needed for converting pitch ranges from PMX data to SVG images.
+##
+
+my $pmx2svg = `which pmx2svg`;
+chomp $pmx2svg;
+if (!-r $pmx2svg) {
+	print "pmx2svg\t\t\tMISSING. Install from cache/bin.\n";
+} elsif ($verboseQ) {
+	print "pmx2svg\t\t\tINSTALLED:\t$pmx2svg\n";
+}
+
+
+
+##############################
+##
+## prange -- Needed for creating pitch range plots
+##
+
+my $prange = `which prange`;
+chomp $prange;
+if ($prange =~ /^\s*$/) {
+	print "prange\t\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "prange\t\t\tINSTALLED:\t$prange\n";
+}
+
+
+
+##############################
+##
+## scapeinfo -- Needed for creating dynamic keyscapes.
+##
+
+my $scapeinfo = `which scapeinfo`;
+chomp $scapeinfo;
+if ($scapeinfo =~ /^\s*$/) {
+	print "scapeinfo\tMISSING. Install humlib\n";
+} elsif ($verboseQ) {
+	print "scapeinfo\t\tINSTALLED:\t$scapeinfo\n";
+}
+
+
+
+##############################
+##
+## serialize -- Needed for creating lyrics search index.
+##
+
+my $serialize = `which serialize`;
+chomp $serialize;
+if ($serialize =~ /^\s*$/) {
+	print "serialize\tMISSING. Install humextra\n";
+} elsif ($verboseQ) {
+	print "serialize\t\tINSTALLED:\t$serialize\n";
+}
+
+
+
+##############################
+##
+## tie -- Needed for creating MusicXML files.
+##
+
+my $tie = `which tie`;
+chomp $tie;
+if ($tie =~ /^\s*$/) {
+	print "tie\t\tMISSING. Install humlib\n";
+} elsif ($verboseQ) {
+	print "tie\t\t\tINSTALLED:\t$tie\n";
+}
+
+
+
+##############################
+##
+## tindex -- Needed for creating music search indexes (from Humdrum Extras).
+##
+
+my $tindex = `which tindex`;
+chomp $tindex;
+if ($tindex =~ /^\s*$/) {
+	print "tindex\t\tMISSING.  Install github.com/humdrum-tools/humdrum-tools\n";
+} elsif ($verboseQ) {
+	print "tindex\t\t\tINSTALLED:\t$tindex\n";
+}
+
+
+
+##############################
+##
+## verovio -- Needed for Humdrum-to-MEI conversion and Humdrum-to-SVG conversions.
+##
+
+my $verovio = `which verovio`;
+chomp $verovio;
+if ($verovio =~ /^\s*$/) {
+	print "verovio\t\tMISSING.  Install github.com/rism-online/verovio\n";
+} elsif ($verboseQ) {
+	print "verovio\t\t\tINSTALLED:\t$verovio\n";
+}
+
+
+
+##############################
+##
+## wget -- Needed for downloading Google spreadsheet information.
+##
+
+my $wget = `which wget`;
+chomp $wget;
+if ($wget =~ /^\s*$/) {
+	print "wget\t\tMISSING\n";
+} elsif ($verboseQ) {
+	print "wget\t\t\tINSTALLED:\t$wget\n";
+}
+
+
+
+##############################
+##
+## zcat -- Needed for uncompressing MEI and MusicXML files when
+##     serving file to browsers that do not understant gzip.
+##
+
+my $zcat = `which zcat`;
+chomp $zcat;
+if ($zcat =~ /^\s*$/) {
+	print "zcat\t\tMISSING\n";
+} elsif ($verboseQ) {
+	print "zcat\t\t\tINSTALLED:\t$zcat\n";
+}
+

@@ -1,0 +1,384 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sat 18 Sep 2021 07:30:52 AM PDT
+# Last Modified: Mon 15 Aug 2022 04:47:45 PM PDT (put 001 type numbers in quotes).
+# Filename:      cache/bin/getInfo
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   List basic information about an entry, such as
+#                available formats and IDs.
+#
+# Options:
+#     -j   == Output data in JSON format (ATON format is default)
+#
+# Possible IDs:
+#    file     == Full filename
+#    fileid   == Unique part of original filenames in repositories.
+#    cenid    == Century enumeration (POPC-2 only)
+#    sqlid    == Postgress SQL enumeration (currently POPC-1 only)
+# Possible formats:
+#    mei      == MEI data conversion
+#    musicxml == MusicXML data conversion
+#    lyrics   == If score has **text columns.
+#
+
+use strict;
+use Getopt::Long;
+
+my $depth = 1;
+
+my $indexfile;
+my $cachedir;
+my $jsonQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+	'i|indexfile=s' => \$indexfile,
+	'c|cachedir=s'  => \$cachedir,
+	'j|json'        => \$jsonQ
+);
+
+my $id = $ARGV[0];
+
+die "Cache directory is required" if $cachedir =~ /^\s*$/;
+$indexfile = "cache-index.hmd" if $indexfile =~ /^\s*$/;
+
+my %IndexMd5;
+my %IndexCentid;
+my %IndexFileid;
+my %IndexCentidReverse;
+my %IndexFileidReverse;
+getIndexes("$cachedir/$indexfile");
+
+my $output = generateInfo($id);
+$output = convertToJson($output) if $jsonQ;
+print "\n$output\n";
+
+exit(0);
+
+
+###########################################################################
+
+##############################
+##
+## convertToJson --
+##
+
+sub convertToJson {
+	my ($aton) = @_;
+	my %params;
+	#$aton =~ s/^\s+//s;
+	#$aton =~ s/\s+$//s;
+	my @contents = split(/\n/, $aton);
+	chomp @contents;
+	my $key = "";
+	my $value = "";
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		if ($line =~ /^\@\@/) {
+			$key = "";
+			$value = "";
+		} elsif ($line =~ /^\@([^:]+)\s*:\s*(.*)\s*$/) {
+			$key = $1;
+			$value = $2;
+			if ($params{$key} =~ /^\s*$/) {
+				$params{$key} = $value;
+			} else {
+				$params{$key} .= "\t$value";
+			}
+			$value = "";
+		} elsif ($line =~ /^\@/) {
+			next;
+		} else {
+			if ($key !~ /^\s*$/) {
+				$params{$key} .= "\n$line";
+			}
+		}
+	}
+	my $output = "";
+	my @keys = sort keys %params;
+	$output .= "{\n";
+	for (my $i=0; $i<@keys; $i++) {
+		my $key = $keys[$i];
+		$output .= "\t\"$key\":\t";
+		if (length $key < 5) {
+			$output .= "\t";
+		}
+		if (length $key < 14) {
+			$output .= "\t";
+		}
+		my $value = $params{$key};
+		if ($value =~ /^\d+$/) {
+			if ($value =~ /^0$/) {
+				# integer
+				$output .= $value;
+			} elsif ($value =~ /^0/) {
+				# string
+				$output .= "\"$value\"";
+			} else {
+				# integer
+				$output .= $value;
+			}
+		} elsif ($value =~ /^[+-]?\d*\.\d+$/) {
+			# floating-point number
+			$output .= $value;
+		} else {
+			# string
+			$value =~ s/"/\\"/g;
+			# Deal with newlines as well...
+			$output .= "\"$value\"";
+		}
+		if ($i < @keys - 1) {
+			$output .= ",";
+		}
+		$output .= "\n";
+	}
+	$output .= "}\n";
+	return $output;
+}
+
+
+
+##############################
+##
+## generateInfo --
+##
+
+sub generateInfo {
+	my ($id) = @_;
+	my $md5;
+	if ($IndexMd5{$id} !~ /^\s*$/) {
+		$md5 = $id;
+	} elsif ($IndexCentidReverse{$id} !~ /^\s*$/) {
+		$md5 = $IndexCentidReverse{$id};
+	} elsif ($IndexFileidReverse{$id} !~ /^\s*$/) {
+		$md5 = $IndexFileidReverse{$id};
+	}
+	my $cenid = $IndexCentid{$md5};
+	my $fileid = $IndexFileid{$md5};
+
+	my $output = "";
+	$output .= "\@md5id:\t\t\t$md5\n" if $md5 !~ /^\s*$/;
+	$output .= "\@fileid:\t\t$fileid\n" if $fileid !~ /^\s*$/;
+	# cenid is provided in spreadsheet data:
+	# $output .= "\@cenid:\t$cenid\n" if $cenid !~ /^\s*$/;
+
+	my $dir = getSourceDir($md5, $depth);
+	my $mei      = 0;
+	my $musicxml = 0;
+
+	my @files = glob("$cachedir/$dir/*");
+	foreach my $file (@files) {
+		$mei = 1 if $file =~ /\.mei/;
+		$musicxml = 1 if $file =~ /\.musicxml/;
+	}
+
+	$output .= "\@mei:\t\t\t$mei\n";
+	$output .= "\@musicxml:\t\t$musicxml\n";
+
+	my $kernfile = "$cachedir/$dir/$md5.krn";
+	my $lyrics   = 0;
+	my $filename = "";
+	
+	my $line;
+	if (-r $kernfile) {
+		if (open(FILE, $kernfile)) {
+			while ($line = <FILE>) {
+				chomp $line;
+				if ($line =~ /^!!!!SEGMENT\s*:\s*(.*)\s*$/) {
+					$filename = $1;
+				} elsif ($line =~ /^\*\*/) {
+					if ($line =~ /\*\*text/) {
+						$lyrics = 1;
+					}
+					last;
+				}
+			}
+			close FILE;
+		}
+	}
+
+	$output .= "\@lyrics:\t\t$lyrics\n";
+	$output .= "\@filename:\t\t$filename\n";
+
+	if ($filename !~ /^\s*$/) {
+		$output .= "\@repository:";
+		if ($filename =~ /(^pl-[^-]+)--/) {
+				# POPC-2
+				my $siglum = $1;
+				$output .= "\t\thttps://github.com/josquin-research-project/jrp-scores";
+		} elsif ($filename =~ /^\d/) {
+				# POPC-1
+			 	$output .= "\t\thttps://github.com/josquin-research-project/jrp-scores";
+		} else {
+				# Strange problem with filename.
+		}
+		$output .= "\n";
+	} else {
+		$output .="\@repository\n";
+	}
+
+	if ($filename !~ /^\s*$/) {
+		$output .= "\@repository-file:";
+		if ($filename =~ /(^pl-[^-]+)--/) {
+				# POPC-2
+				my $siglum = $1;
+				$output .= "\thttps://github.com/pl-wnifc/humdrum-polish-scores/blob/main/$siglum/kern/$filename";
+		} elsif ($filename =~ /^\d/) {
+				# POPC-1
+			 	$output .= "\thttps://github.com/pl-wnifc/humdrum-chopin-first-editions/blob/main/kern/$filename";
+		} else {
+				# Strange problem with filename.
+		}
+		$output .= "\n";
+	} else {
+		$output .="\@repository-file\n";
+	}
+
+	if ($filename !~ /^\s*$/) {
+		$output .= "\@repository-raw:";
+		if ($filename =~ /(^pl-[^-]+)--/) {
+				# POPC-2
+				my $siglum = $1;
+				$output .= "\thttps://raw.githubusercontent.com/pl-wnifc/humdrum-polish-scores/main/$siglum/kern/$filename";
+		} elsif ($filename =~ /^\d/) {
+				# POPC-1
+				$output .= "\thttps://raw.githubusercontent.com/pl-wnifc/humdrum-chopin-first-editions/main/kern/$filename";
+		} else {
+				# Strange problem with filename.
+		}
+		$output .= "\n";
+	} else {
+		$output .="\@repository-raw:\n";
+	}
+
+	my $targetdir = getTargetDir($md5, $depth);
+	my $sfile = "$cachedir/$targetdir/$md5-spreadsheet.aton";
+	if (-r $sfile) {
+		if (open(FILE, $sfile)) {
+			my @contents = <FILE>;
+			close FILE;
+			foreach my $line (@contents) {
+				chomp $line;
+				next if $line =~ /^\s*$/;
+				$output .= "$line\n";
+			}
+		}
+	}
+
+	return $output;
+}
+
+
+
+##############################
+##
+## getTargetDir --
+##
+
+sub getTargetDir {
+	my ($md5, $cacheDepth) = @_;
+	return $md5 if $cacheDepth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$cacheDepth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+
+##############################
+##
+## getFilename --
+##
+
+sub getFilename {
+	my ($md5) = @_;
+	my $sourcedir = getSourceDir($md5, $depth);
+	my $line = `grep SEGMENT $sourcedir/$md5.krn | head -n 1`;
+	chomp $line;
+	if ($line =~ /^\!\!\!\!SEGMENT\s*:\s*(.*)\s*$/) {
+		return $1;
+	} else {
+		return "FILENAME_ERROR($line)";
+	}
+}
+
+
+
+##############################
+##
+## getIndexes --
+##
+
+sub getIndexes {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $fileidIndex = -1;
+	my $centuryIndex = -1;
+	my $exinterp = 0;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line =~ /^\s*$/;
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index = $j if $fields[$j] eq "**md5";
+				$centuryIndex = $j if $fields[$j] eq "**cenid";
+				$fileidIndex = $j if $fields[$j] eq "**fileid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		my $md5 = $fields[$md5Index];
+		die "ERROR: required md5 id is missing" if $md5 =~ /^\s*$/;
+		die "ERRORB: required md5 id is missing" if $md5 eq ".";
+		$IndexMd5{$md5} = $md5;
+		if ($centuryIndex >= 0) {
+			my $cenid = $fields[$centuryIndex];
+			$IndexCentid{$md5} = $cenid;
+			$IndexCentidReverse{$cenid} = $md5;
+		}
+		if ($fileidIndex >= 0) {
+			my $fileid = $fields[$fileidIndex];
+			$IndexFileid{$md5} = $fileid;
+			$IndexFileidReverse{$fileid} = $md5;
+		}
+	}
+}
+
+
+
+##############################
+##
+## getSourceDir --
+##
+
+sub getSourceDir {
+	my ($md5, $depth) = @_;
+	return $md5 if $depth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$depth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+

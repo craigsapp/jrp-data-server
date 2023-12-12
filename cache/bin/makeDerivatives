@@ -1,0 +1,162 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun Sep 12 11:26:56 PDT 2021
+# Last Modified: Sun 09 Apr 2023 02:10:38 PM PDT
+# Filename:      cache/bin/makeDerivatives
+# Syntax:        perl 5
+# vi:            ts=3
+#
+# Description:   Create derivative files from cached Humdrum files.
+#
+# Options:
+#    -f            == Force regeneration of all derivative files.  If this
+#                     option is not given, only missing derivative files will
+#                     be prepared and existing ones will not be overwritten.
+#    -r            == Reverse the order of derivative preparation.  This can
+#                     be used to make the derivatives in two separate threads.
+#    -g groups     == Cache ID groups to prepare derivatives for.  This allows
+#                     for up to 16 independent threads to prepare derivatives.
+#                     Example: prepare groups where MD5 ID starts with 1, 4, 6, and b:
+#                         -g 146b
+#    -v            == verbose mode.  Print each entry that is being checked.
+#    -d derivative == Prepare derivatives of a certain type.  If no
+#                     specific derivative given, then prepare all
+#                     derivatives.  Allowed derivative types:
+#                        incipit  == Create SVG incipit file (using verovio)
+#                        keyscape == Create keyscape plot images (using mkeyscape and convert)
+#                        lyrics   == Extract lyrics from score by part.
+#                        mei      == Create MEI file (using verovio)
+#                        midi     == Create MIDI file (using hum2mid)
+#                        musedata == Create Musedata file (using humextra's hum2muse)
+#                        musicxml == Create MusicXML file (using converter21)
+#                        thema    == Create Thema search indexes (uses tindex)
+#                        wordlist == Create A list of words from any lyrics in the score.
+#
+# Each derivative is made with a separate script in the form derivative-*:
+#
+#     derivative-incipit   == Creates musical incipit SVGs.
+#     derivative-keyscape  == Creates keyscape image files.
+#     derivative-lyrics    == Creates MEI files.
+#     derivative-mei       == Creates MEI files.
+#     derivative-midi      == Creates MIDI files.
+#     derivative-musicxml  == Creates MusicXML files.
+#     derivative-thema     == Creates Thema music search index file(s).
+#     derivative-wordlist  == Creates a list of words from lyrcs in the input score.
+# 
+# Other dynamic-content files are generated on-the-fly by the CGI script.
+
+use strict;
+use Getopt::Long;
+
+my $derivatives;
+my $forceQ   = 0;
+my $reverseQ = 0;
+my $verboseQ = 0;
+my $groups   = "";
+Getopt::Long::Configure("bundling");
+GetOptions (
+	'd|derivative|derivatives=s' => \$derivatives,
+	'f|force'                    => \$forceQ,
+	'g|groups=s'                 => \$groups,
+	'r|reverse'                  => \$reverseQ,
+	'v|verbose'                  => \$verboseQ
+);
+
+$groups = "0123456789abcdef" if $groups =~ /^\s*$/;
+$groups = reverse($groups) if $reverseQ;
+
+# musicxml removed from the all option [20220813]
+$derivatives = "incipit,keyscape,lyrics,mei,midi,musedata,prange,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives =~ s/^[^0-9a-zA-Z_-]+//;
+$derivatives =~ s/[^0-9a-zA-Z_-]+$//;
+my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);
+
+my $bindir = `pwd`;
+chomp $bindir;
+$bindir =~ s/\/$//;
+if ($bindir !~ /\/bin$/) {
+	$bindir .= "/bin";
+}
+die "ERROR: Cannot find bin directory $bindir\n" if !-d $bindir;
+
+my @order = split(//, $groups);
+foreach my $digit (@order) {
+	prepareDerivatives($digit);
+}
+
+exit(0);
+
+
+###########################################################################
+
+##############################
+##
+## prepareDerivatives -- Calculate derivative files for a given
+##    directory and any single-digit subdirectories within it.
+##
+
+sub prepareDerivatives {
+	my ($basedir) = @_;
+	return if !-d $basedir;
+	my @subdirs;
+	my @md5dirs;
+	opendir(DIR, $basedir) or die "Cannot read $basedir\n";
+	while (my $file = readdir(DIR)) {
+		next if $file =~ /^\./;
+		next if !-d "$basedir/$file";
+		if ($file =~ /^[0-9a-f]$/) {
+			$subdirs[@subdirs] = $file;
+		} elsif ($file =~ /^[0-9a-f]{8}$/) {
+			$md5dirs[@md5dirs] = $file;
+		}
+	}
+	if ($reverseQ) {
+		foreach my $md5 (reverse sort @md5dirs) {
+			prepareDerivativesForEntry($basedir, $md5);
+		}
+		foreach my $dir (reverse sort @subdirs) {
+			prepareDerivatives("$basedir/$dir");
+		}
+	} else {
+		foreach my $md5 (sort @md5dirs) {
+			prepareDerivativesForEntry($basedir, $md5);
+		}
+		foreach my $dir (sort @subdirs) {
+			prepareDerivatives("$basedir/$dir");
+		}
+	}
+}
+
+
+
+##############################
+##
+## prepareDerivativesForEntry --
+##
+
+sub prepareDerivativesForEntry {
+	my ($basedir, $md5) = @_;
+	print STDERR "Processing entry $md5 ...\n" if $verboseQ;
+	die "Problem in basedir $basedir" if $basedir !~ /^[a-zA-Z0-9_\/-]+$/;
+	die "Problem in md5 $md5" if $md5 !~ /^[0-9a-f]{8}$/;
+	die "Cannot locate directory $basedir/$md5\n" if !-d "$basedir/$md5";
+	die "Cannot locate source file $basedir/$md5/$md5.krn\n" if !-r "$basedir/$md5/$md5.krn";
+	foreach my $derivative (@derivativeList) {
+		my $dscript = "$bindir/derivative-$derivative";
+		if (!-r $dscript) {
+			print STDERR "WARNING: Derivative-generating program $dscript does not exist.\n";
+			next;
+		}
+		my $command;
+		if ($forceQ) {
+			$command = "(cd $basedir/$md5 && $dscript -f $md5)";
+		} else {
+			$command = "(cd $basedir/$md5 && $dscript $md5)";
+		}
+		`$command`;
+	}
+}
+
+
+

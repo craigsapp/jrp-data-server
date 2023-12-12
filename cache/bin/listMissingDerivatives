@@ -1,0 +1,473 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Thu 16 Sep 2021 05:27:02 PM PDT
+# Last Modified: Fri 22 Oct 2021 10:56:29 AM PDT
+# Filename:      cache/bin/listMissingDerivatives
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   List all missing derivatives.
+#
+# Derivatives that can be checked
+#    lyrics   == Extracted lyrics files
+#    mei      == MEI files
+#    musedata == Musedta files
+#    musicxml == MusicXML files
+#    midi     == MIDI files
+#    keyscape == keyscape plot images
+#    incipit  == SVG incipit files
+#    thema    == Thema search indexes
+#
+#
+
+use strict;
+use Getopt::Long;
+
+my $depth = 1;
+
+my $derivatives;
+my $centuryQ = 0;  # -c :: List century ID of missing derivative file.
+my $fileQ    = 0;  # -f :: List Humdrum filename of missing derivative file.
+my $fileidQ  = 0;  # -i :: List file ID of missing derivative file.
+my $md5Q     = 0;  # -m :: List MD5 ID of missing derivativer file.
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'd|derivative|derivatives=s' => \$derivatives,
+   'c|century' => \$centuryQ,
+   'f|file'    => \$fileQ,
+   'i|fileid'  => \$fileidQ,
+   'm|md5'     => \$md5Q
+);
+
+# Default missing file reporting style:
+if ((!$centuryQ) && (!$fileidQ) && (!$fileQ) && (!$md5Q)) {
+	$md5Q     = 1;
+	$centuryQ = 1;
+	$fileidQ  = 1;
+}
+
+my $indexfile = "cache-index.hmd";
+my %Index = getIndex($indexfile);
+#for my $key (sort keys %Index) {
+#	print "$key\t$Index{$key}\n";
+#}
+
+$derivatives = "mei,musicxml,musedata,midi,keyscape,incipit,lyrics,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives =~ s/^[^0-9a-zA-Z_-]+//;
+$derivatives =~ s/[^0-9a-zA-Z_-]+$//;
+my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);
+
+my $bindir = `pwd`;
+chomp $bindir;
+$bindir =~ s/\/$//;
+if ($bindir !~ /\/bin$/) {
+	$bindir .= "/bin";
+}
+
+die "ERROR: Cannot find bin directory $bindir\n" if !-d $bindir;
+
+my $groups = "0123456789abcdef";
+my @list = split(//, $groups);
+foreach my $dir (@list) {
+	listMissingDerivatives($dir);
+}
+
+exit(0);
+
+
+###########################################################################
+
+##############################
+##
+## listMissingDerivatives --
+##
+
+sub listMissingDerivatives {
+	my ($basedir) = @_;
+	return if !-d $basedir;
+	my @subdirs;
+	my @md5dirs;
+	opendir(DIR, $basedir) or die "Cannot read $basedir\n";
+	while (my $file = readdir(DIR)) {
+		next if $file =~ /^\./;
+		next if !-d "$basedir/$file";
+		if ($file =~ /^[0-9a-f]$/) {
+			$subdirs[@subdirs] = $file;
+		} elsif ($file =~ /^[0-9a-f]{8}$/) {
+			$md5dirs[@md5dirs] = $file;
+		}
+	}
+	foreach my $md5 (sort @md5dirs) {
+		listMissingDerivativesForEntry($basedir, $md5);
+	}
+	foreach my $dir (sort @subdirs) {
+		listMissingDerivatives("$basedir/$dir");
+	}
+}
+
+
+
+##############################
+##
+## listMissingDerivativesForEntry --
+##
+
+sub listMissingDerivativesForEntry {
+	my ($basedir, $md5) = @_;
+	die "Problem in basedir $basedir" if $basedir !~ /^[a-zA-Z0-9_\/-]+$/;
+	die "Problem in md5 $md5" if $md5 !~ /^[0-9a-f]{8}$/;
+	die "Cannot locate directory $basedir/$md5\n" if !-d "$basedir/$md5";
+	die "Cannot locate source file $basedir/$md5/$md5.krn\n" if !-r "$basedir/$md5/$md5.krn";
+	foreach my $derivative (@derivativeList) {
+
+		if ($derivative eq "mei") {
+			if (!-r "$basedir/$md5/$md5.mei.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "musicxml") {
+			if (!-r "$basedir/$md5/$md5.musicxml.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "midi") {
+			if (!-r "$basedir/$md5/$md5.mid") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "incipit") {
+			if (!-r "$basedir/$md5/$md5-incipit.svg.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "musedata") {
+			if (!-r "$basedir/$md5/$md5.md2.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "thema") {
+			if (!-r "$basedir/$md5/$md5-pitch.thema") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "wordlist") {
+			# Should also check to see if there is **text in digital score.
+			# since it is expected to be no file if there is no **text.
+			if (!-r "$basedir/$md5/$md5-wordlist.txt") {
+				if (@derivativeList > 1) {
+					print "$derivative\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "lyrics") {
+			# Should also check to see if there is **text in digital score.
+			# since there will be expected to be no file if there is no **text.
+
+			if (!-r "$basedir/$md5/$md5-lyrics.txt.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative\t\t";
+				} else {
+					print "lyrics\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+			if (!-r "$basedir/$md5/$md5-lyrics-modern.txt.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative-modern\t";
+				} else {
+					print "lyrics-modern\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} elsif ($derivative eq "keyscape") {
+
+			if (!-r "$basedir/$md5/$md5-keyscape-abspost.png") {
+				if (@derivativeList > 1) {
+					print "$derivative-abspost\t\t";
+				} else {
+					print "keyscape-abspost\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+			if (!-r "$basedir/$md5/$md5-keyscape-abspre.png") {
+				if (@derivativeList > 1) {
+					print "$derivative-abspre\t\t";
+				} else {
+					print "keyscape-abspre\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+			if (!-r "$basedir/$md5/$md5-keyscape-relpost.png") {
+				if (@derivativeList > 1) {
+					print "$derivative-relpost\t\t";
+				} else {
+					print "keyscape-relpost\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+			if (!-r "$basedir/$md5/$md5-keyscape-relpre.png") {
+				if (@derivativeList > 1) {
+					print "$derivative-relpre\t\t";
+				} else {
+					print "keyscape-relpre\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+			if (!-r "$basedir/$md5/$md5-keyscape-info.json.gz") {
+				if (@derivativeList > 1) {
+					print "$derivative-info\t\t";
+				} else {
+					print "keyscape-info\t\t";
+				}
+				print "$Index{$md5}";
+				if ($fileQ) {
+					my $filename = getFilename($md5);
+					if ($Index{$md5} eq "") {
+						print $filename;
+					} else {
+						print "\t$filename";
+					}
+				}
+				print "\n";
+			}
+
+		} else {
+			print "Unknown derivative: $derivative\n";
+		}
+
+	}
+}
+
+
+
+##############################
+##
+## getFilename --
+##
+
+sub getFilename {
+	my ($md5) = @_;
+	my $sourcedir = getSourceDir($md5, $depth);
+	my $line = `grep SEGMENT $sourcedir/$md5.krn | head -n 1`;
+	chomp $line;
+	if ($line =~ /^\!\!\!\!SEGMENT\s*:\s*(.*)\s*$/) {
+		return $1;
+	} else {
+		return "FILENAME_ERROR($line)";
+	}
+}
+
+
+
+##############################
+##
+## getIndex --
+##
+
+sub getIndex {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $fileidIndex = -1;
+	my $centuryIndex = -1;
+	my $exinterp = 0;
+	my %output;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index = $j if $fields[$j] eq "**md5";
+				$centuryIndex = $j if $fields[$j] eq "**cenid";
+				$fileidIndex = $j if $fields[$j] eq "**fileid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		my $value = "";
+		if ($md5Q && $md5Index >= 0) {
+			$value .= $fields[$md5Index] . "\t";
+		}
+		if ($centuryQ && $centuryIndex >= 0) {
+			$value .= $fields[$centuryIndex] . "\t";
+		}
+		if ($fileidQ && $fileidIndex >= 0) {
+			$value .= $fields[$fileidIndex] . "\t";
+		}
+		$value =~ s/\t+$//;
+		$output{$fields[$md5Index]} = $value;
+	}
+	return %output;
+}
+
+
+
+##############################
+##
+## getSourceDir --
+##
+
+sub getSourceDir {
+	my ($md5, $depth) = @_;
+	return $md5 if $depth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$depth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+

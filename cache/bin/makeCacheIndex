@@ -1,0 +1,176 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun Sep 12 06:28:28 PDT 2021
+# Last Modified: Wed 09 Feb 2022 10:20:11 PM PST (Added s- sigla)
+# Filename:      cache/bin/makeIndex
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Reads the files in ../kern directory to create an index of MD5
+#                mappings to the filename.
+#
+
+use strict;
+
+my $md5sum = `which md5 2> /dev/null`;
+chomp $md5sum;
+if ($md5sum =~ /^\s*$/) {
+	$md5sum = `which md5sum`;
+	chomp $md5sum;
+}
+die "Cannot find md5 or md5sum programs." if $md5sum =~ /^\s*$/;
+
+my $srcdir = "../kern";
+
+my @files = glob("$srcdir/*.krn");
+
+my $index = generateIndex(@files);
+
+print $index;
+
+exit(0);
+
+###########################################################################
+
+
+##############################
+##
+## generateIndex --
+##
+
+sub generateIndex {
+	my @files = @_;
+	my $output = "";
+	$output .= "!! Cache index, meaning of each column:\n";
+	$output .= "!! **md5    == First eight digits of MD5 checksum used to cache file.\n";
+	$output .= "!! **pmsid  == Enumeration number of work in polish.musicsources.pl. (work level)\n";
+	$output .= "!! **rismid  == RISM ID that contains work\n";
+	$output .= "!! **cenid  == Century enumeration number for POPC-2 files.\n";
+	$output .= "!! **fileid == File ID (excludes composer/title in POPC-2 files).\n";
+	$output .= "**md5\t**pmsid\t**rismid\t**cenid\t**fileid\n";
+	for (my $i=0; $i<@files; $i++) {
+		my $file = $files[$i];
+		my $base = $file;
+		$base =~ s/.*\///;
+		$base =~ s/\.krn$//;
+		my $shortbase = $base;
+		# next if $base =~ /^s-/;
+		if (($base =~ /^pl-/) ||  # Poland
+		    ($base =~ /^s-/)  ||  # Sweden
+		    ($base =~ /^d-/)  ||  # Germany
+		    ($base =~ /^f-/)  ||  # France
+		    ($base =~ /^i-/)  ||  # Italy
+		    ($base =~ /^sk-/) ||  # Slovakia
+		    ($base =~ /^cz-/)     # Chechia
+			) {
+			# POPC-2 file
+			$shortbase =~ s/_.*//;
+		} else {
+			# POPC-1 file (Chopin)
+			$shortbase = $base;
+		}
+		my $sum = `$md5sum $file`;
+		if ($sum =~ /([0-9a-f]{32})/) {
+			$sum = $1;
+		} else {
+			die "Problem with MD5 extraction: $sum\n";
+		}
+		$sum =~ /^(.{8})/;
+		my $shortsum = $1;
+
+		my $cenid = ".";
+		if ($shortbase =~ /^pl-/) {
+			$cenid = getCenturyId($file);
+		} elsif ($shortbase =~ /^[sdfi]-/) {
+			$cenid = getCenturyId($file);
+		} elsif ($shortbase =~ /^sk-/) {
+			$cenid = getCenturyId($file);
+		} elsif ($shortbase =~ /^cz-/) {
+			$cenid = getCenturyId($file);
+		}
+
+		my $pmsid = ".";
+		$pmsid = getPmsId($file);
+
+		my $rismid = ".";
+		$rismid = getRismId($file);
+
+		$output .= "$shortsum\t$pmsid\t$rismid\t$cenid\t$shortbase\n";
+	}
+	$output .= "*-\t*-\t*-\t*-\t*-\n";
+	return $output;
+}
+
+
+
+##############################
+##
+## getCenturyId --
+##
+
+sub getCenturyId {
+	my ($filename) = @_;
+	my $output = "unknown";
+	open (FILE, $filename) or die "Cannot read $filename\n";
+	while (my $line = <FILE>) {
+		chomp $line;
+		if ($line =~ /^!!!c?e?n?id:\s*([012]\dxx:\d+[^\s]*)\s*$/) {
+			$output = $1;
+			last;
+		}
+	}
+	close FILE;
+	return $output;
+}
+
+
+
+##############################
+##
+## getPmsId --
+##
+## !!!URL-scan: https://polish.musicsources.pl/pl/lokalizacje/galeria/rekopisy/5828
+##
+
+sub getPmsId {
+	my ($filename) = @_;
+	my $output = ".";
+	open (FILE, $filename) or die "Cannot read $filename\n";
+	while (my $line = <FILE>) {
+		chomp $line;
+		if ($line =~ /^!!!URL-scan:\s*https:\/\/polish\.musicsources\.pl\/(en|pl)\/lokalizacje\/galeria\/(.)[a-zA-Z_-]*\/(\d+)\b/) {
+			$output = "pms:$2$3";
+			last;
+		}
+	}
+	close FILE;
+	return $output;
+}
+
+
+
+##############################
+##
+## getRismId --
+##
+## !!!NIFC-rismSourceID: 300258022
+##
+
+sub getRismId {
+	my ($filename) = @_;
+	my $output = ".";
+	open (FILE, $filename) or die "Cannot read $filename\n";
+	while (my $line = <FILE>) {
+		chomp $line;
+		if ($line =~ /^!!!NIFC-rismSourceID:\s*(\d+)\s*$/) {
+			$output = "rism:$1";
+			last;
+		}
+	}
+	close FILE;
+	return $output;
+}
+
+
+

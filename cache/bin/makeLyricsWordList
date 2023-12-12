@@ -1,0 +1,154 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon 04 Oct 2021 06:54:10 PM PDT
+# Last Modified: Mon 04 Oct 2021 06:54:12 PM PDT
+# Filename:      makeLyricsWordList
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   This script extracts lyrics from **text spines in
+#                Humdrum files and merges syllables into words.
+#
+# Usage:         cat file.krn | makeLyricsWordList [-n] [-c]
+#                
+
+use strict;
+use Getopt::Long;
+use IPC::Open3;
+
+my $extractx  = `which extractx`;
+chomp $extractx;
+die "Cannot find extractx\n" if $extractx =~ /^\s*$/;
+
+my $serialize  = `which serialize`;
+chomp $serialize;
+die "Cannot find serialize\n" if $serialize =~ /^\s*$/;
+
+my $humcat  = `which humcat`;
+chomp $humcat;
+die "Cannot find humcat\n" if $humcat =~ /^\s*$/;
+
+
+
+my $columnQ = 0;  # display as a column rather than a row.
+my $numberQ = 0;  # display 
+
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'c|column' => \$columnQ,
+   'n|number' => \$numberQ,
+);
+
+my @contents = <>;
+
+local (*READ, *WRITE);
+local *ERROR = IO::File->new_tmpfile;
+
+my $command = "extractx -i text | serialize | ridx -H";
+
+my $pid = open3(*WRITE, *READ, ">&ERROR", "$command");
+
+binmode(WRITE);
+binmode(READ);
+
+print WRITE "";  # need to do this because of some bug...
+foreach my $line (@contents) {
+	print WRITE $line;
+}
+close(WRITE);
+
+my $output = "";
+my $error = "";
+my $udata;
+while (read(READ, $udata, 4096)) {
+	$output .= $udata;
+}
+close (READ);
+
+waitpid($pid, 0);
+seek ERROR, 0, 0;
+while (read(ERROR, $udata, 4096)) {
+	$error .= $udata;
+}
+
+# print "DATA: $output\n";
+# print "ERROR $error\n";
+
+my @pieces = split(/\n/, $output);
+
+my @words;
+
+for (my $i=0; $i<@pieces; $i++) {
+	my $p = $pieces[$i];
+	$p =~ s/^\s+//;
+	$p =~ s/\s+$//;
+	my @subpieces = split(/[\s_]+/, $p);
+	for (my $j=0; $j<@subpieces; $j++) {
+		my $q = $subpieces[$j];
+		if ($q =~ /^-/) {
+			if (@words > 0) {
+				$q =~ s/^-//;
+				$words[$#words] =~ s/-$//;
+				$words[$#words] .= $q;
+			}
+		} else {
+			$words[@words] = $q;
+		}
+	}
+}
+
+
+my %list;
+
+for (my $i=0; $i<@words; $i++) {
+	my $word = $words[$i];
+	$word =~ s/ſ/s/g;
+	$word =~ s/ʃ/s/g;
+	$word =~ s/ν/u/g;
+	$word =~ s/ί/í/g;
+	$word =~ s/α/a/g;
+	# $word =~ s/ʓ/z̨/g;
+	$word =~ s/ᴣ/z/g;
+	$word =~ s/ӡ/z/g;
+	$word =~ s/ʒ̇/ż/g;
+	$word =~ s/ʒ́/ź/g;
+	$word =~ s/Ł/ł/g;
+	$word =~ s/ť/k/g;
+	$word =~ s/æ/ae/g;
+	$word = lc($word);
+	$word =~ s/[=?!(){}:]//g;
+	$word =~ s/\///g;
+	$word =~ s/\.$//;
+	$word =~ s/^\.//;
+	$word =~ s/,$//;
+	$word =~ s/\&#383;/s/g;  # Entity encoding of long s.
+	if (($word =~ /;$/) && ($word !~ /\&/)) {
+		# Remove semicolons, but only if not a potential entity encoding.
+		$word =~ s/;$//;
+	}
+
+	# Deal with square brackets and double square brackets.
+
+	$list{$word}++;
+}
+
+my @keys = sort keys %list;
+
+for (my $i=0; $i<@keys; $i++) {
+	if ($numberQ) {
+		print $list{$keys[$i]} . " ";
+	}
+	print $keys[$i];
+	if ($i < $#keys) {
+		if ($columnQ) {
+			print "\n";
+		} else {
+			print "\t";
+		}
+	}
+}
+print "\n";
+
+
+

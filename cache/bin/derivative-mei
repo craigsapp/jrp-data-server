@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun Sep 12 11:31:23 PDT 2021
+# Last Modified: Sun Sep 12 11:31:25 PDT 2021
+# Filename:      cache/bin/derivative-mei
+# Syntax:        perl 5
+#
+# Description:   Create MEI file from Humdrum file.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+my $outputfile = "$md5id.mei";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$outputfile.gz";
+} elsif (-r "$outputfile.gz") {
+	unlink("$outputfile.gz");
+}
+
+my $verovio = `which verovio`;
+chomp $verovio;
+die "ERROR: Cannot locate verovio command\n" if $verovio =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
+
+`$verovio $inputfile -atmei -o $outputfile`;
+
+# Maybe also check if file contains some expected XML elements.
+#
+`$gzip $outputfile`;
+
+
+

@@ -1,0 +1,142 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun Aug 15 10:06:47 CEST 2021
+# Last Modified: Thu 23 Sep 2021 08:39:23 PM PDT
+# Filename:      bin/makeKernLinks
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Collects files from various repositories 
+#                into data-server-jrp/kern directory.  The files are linked
+#                to the actual files in their separate repositories.  Run this 
+#                program to update the files with this command:
+#                   make kern
+#
+
+use strict;
+use Getopt::Long;
+use File::Spec;
+use Cwd;
+
+my $verboseQ = 0;
+my $recursiveQ = 0;  # Do a recursive search for *.krn files in a directory.
+my $targetdir;       # Directory into which the symbolic links will be created.
+
+Getopt::Long::Configure("bundling");
+GetOptions (
+   't|target=s' => \$targetdir,
+   'r|recursive=s' => \$recursiveQ,
+   'v|verbose' => \$verboseQ
+);
+
+$targetdir = "kern" if !$targetdir;
+die "Invalid directory $targetdir\n" if $targetdir =~ /^[\/.]/;
+die "Invalid directory $targetdir\n" if $targetdir =~ /\s/;
+die "Invalid directory $targetdir\n" if $targetdir =~ /[^0-9a-zA-Z\/_-]/;
+if (!-d $targetdir) {
+	`mkdir -p "$targetdir"`;
+}
+
+deleteTargetKernFiles($targetdir);
+
+my @dirs = @ARGV;  # Directories that contain *.krn files to link.
+die "Usage: $0 source-directories -t target-directory\n" if @dirs == 0;
+foreach my $srcdir (@dirs) {
+	next if $targetdir eq $srcdir;
+	print STDERR "Linking *.krn files from $srcdir into $targetdir\n";
+	linkKernFilesInDir($targetdir, $srcdir);
+}
+
+exit(0);
+
+
+###########################################################################
+
+
+##############################
+##
+## deleteTargetKernFiles -- Delete all *.krn files in a directory, but only
+##     if they are symbolic links.  Print a warning when a non-symbolic link
+##     kern file is encountered.
+##
+
+sub deleteTargetKernFiles {
+	my ($dir) = @_;
+	my @files = glob("$dir/*.krn");
+	foreach my $file (@files) {
+		if (!-l $file) {
+			print "WARNING: File $file is not a symbolic link, so not deleting it.\n";
+			next;
+		} else {
+			unlink($file);
+		}
+	}
+}
+
+
+
+##############################
+##
+## linkKernFilesInDir -- Create symbolic links to kern files in $targetdir
+##     from $srcdir.  
+##
+
+sub linkKernFilesInDir {
+	my ($targetdir, $srcdir) = @_;
+	if ($verboseQ) {
+		print STDERR "Linking $srcdir/*.krn files into $targetdir\n";
+	}
+	my @files = glob("$srcdir/*.krn");
+	if (!$recursiveQ) {
+		if ((@files == 0) && (-d "$srcdir/kern")) {
+			@files = glob("$srcdir/kern/*.krn");
+		}
+	}
+	foreach my $file (@files) {
+		my $base = $file;
+		$base =~ s/\.krn$//;
+		$base =~ s/.*\///;
+		if (-r "$targetdir/$base.krn") {
+			die "ERROR: $targetdir/$base.krn already exists. Cannot link $file";
+		}
+		if ($verboseQ) {
+			print STDERR "\tLinking $file TO $targetdir/$base.krn\n";
+		}
+		my $source = Cwd::abs_path(File::Spec->rel2abs($file));
+		my $destination = Cwd::abs_path(File::Spec->rel2abs("$targetdir/$base.krn"));
+		if ($verboseQ) {
+			print "SOURCE: $source\n\tDEST: $destination\n";
+		}
+		symlink("$source", "$destination") 
+		 	or die "Cannot link $file to $targetdir/$base.krn";
+	}
+
+	return if !$recursiveQ;
+
+	my @dirs = getSubdirectories($srcdir);
+	foreach my $dir (@dirs) {
+		linkKernFilesInDir($targetdir, "$srcdir/$dir");
+	}
+}
+
+
+
+##############################
+##
+## getSubdirectories --
+##
+
+sub getSubdirectories {
+	my ($basedir) = @_;
+	my @output;
+	opendir (BASEDIR, $basedir) or return @output;
+	while (my $file = readdir(BASEDIR)) {
+		next if $file =~ /^\./;
+		$output[@output] = $file if -d "$basedir/$file";
+	}
+	return sort @output;
+}
+
+
+

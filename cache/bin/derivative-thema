@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon 20 Sep 2021 10:09:01 AM PDT
+# Last Modified: Mon 20 Sep 2021 10:58:44 AM PDT
+# Filename:      cache/bin/derivative-thema
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create thema search indexes.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $tindex = `which tindex`;
+chomp $tindex;
+die "Error: Cannot locate tindex command\n" if $tindex =~ /^\s*$/;
+
+my $chord = `which chord`;
+chomp $chord;
+die "Error: Can not find chord tool.  Install humlib?" if $chord =~ /^\s*$/;
+
+
+my $tag = "pitch";
+my $ext = "thema";
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$md5id-$tag.$ext";
+} elsif (-r "$md5id-$tag.$ext") {
+	unlink("$md5id-$tag.$ext");
+}
+
+print STDERR "Generating $md5id pitch index\n";
+my @pindex = `cat $inputfile | $chord -d | $tindex --rests -p`;
+open FILE, ">$md5id-$tag.$ext" or die "Cannot write $md5id-$tag.$ext\n";
+for (my $i=0; $i<@pindex; $i++) {
+	my $line = $pindex[$i];
+	$pindex[$i] = "$inputfile$line" if $line =~ /^:/;
+	print FILE $pindex[$i];
+}
+close FILE;
+
+
+

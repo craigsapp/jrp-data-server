@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon 04 Oct 2021 07:51:12 PM PDT
+# Last Modified: Mon 04 Oct 2021 07:54:29 PM PDT
+# Filename:      cache/bin/derivative-wordlist
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create wordlist
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $tag = "wordlist";
+my $ext = "txt";
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+my $exinterp = `grep "^\\*\\*" $md5id.krn`;
+if ($exinterp !~ /text/) {
+	exit(0);
+}
+
+if (!$forceQ) {
+	exit 0 if -r "$md5id-$tag.$ext";
+} elsif (-r "$md5id-$tag.$ext") {
+	unlink("$md5id-$tag.$ext");
+}
+
+my $command = "../../bin/makeLyricsWordList";
+die "Cannot find command $command" if !-r $command;
+
+`$command -n $inputfile  > $md5id-$tag.$ext`;
+
+

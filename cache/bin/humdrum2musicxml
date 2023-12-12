@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+#
+# Programmer:     Craig Stuart Sapp <craig@ccrma.stanford.edu>
+# Creation Date:  Mon 13 Sep 2021 11:06:35 AM PDT
+# Last Modified:  Mon 13 Sep 2021 11:06:38 AM PDT
+# Program Name:   humdrum2musicxml
+# Syntax:         PERL 5
+# Usage:          humdrum2musicxml file.krn > file.musicxml
+# Usage:          cat file.krn | humdrum2musicxml > file.musicxml
+#
+# Description:    Converts Humdrum data into MusicXML data, using
+#                 conversion interface at http://data.musicxml.humdrum.org
+#
+# To use LWP, you may need to run this command or related:
+#       perl -MCPAN -e "install Bundle::LWP;"
+#       dnf install 'perl(LWP::ConsoleLogger)'
+#      
+
+use strict;
+use HTTP::Request::Common;
+use LWP::UserAgent;
+#use LWP::ConsoleLogger::Easy qw( debug_ua );
+
+my $data;
+my $line;
+while ($line = <>) {
+   $data .= "$line";
+}
+
+my $url = "https://data.musicxml.humdrum.org";
+my $ua = LWP::UserAgent->new();
+#debug_ua( $ua );
+my $request = POST($url, ['inputdata', [$data]]);
+my $content = $ua->request($request)->as_string();
+my @lines = split(/\n/, $content);
+my $emptyline = 0;
+for (my $i=0; $i<@lines; $i++) {
+	$line = $lines[$i];
+	if (($line eq "") && !$emptyline ) {
+		$emptyline = 1;
+		next;
+	}
+	next if !$emptyline;
+	print "$line\n";
+}
+
+
+
+

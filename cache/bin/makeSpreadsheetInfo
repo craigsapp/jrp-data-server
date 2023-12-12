@@ -1,0 +1,271 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sat 18 Sep 2021 02:36:31 PM PDT
+# Last Modified: Sat 18 Sep 2021 02:36:34 PM PDT
+# Filename:      cache/bin/makeSpreadsheetInfo
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Download digital score metadata from Google Spreadsheet and store in cache.
+#
+# Options:
+#     -i index-file  == File that contains a list of the input
+#                       files and MD5 ID mapping for cache directories.
+#
+
+use strict;
+use Getopt::Long;
+
+# Cache depth (number of subdirectory levels until file directories).
+my $cacheDepth = 1;
+
+my $wget = `which wget`;
+chomp $wget;
+die "Cannot find wget program\n" if $wget =~ /^\s*$/;
+
+my $macroid = "AKfycbyO24ZeK-WYDf5UC5YVvsz2AR0vzVc0stn7COaj6oe-Wk3AkcHw8OaR9_zj4y3cQEDGPA";
+my $indexfile;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'i|index=s' => \$indexfile,
+   'm|macroid=s' => \$macroid
+);
+
+$indexfile = "cache-index-new.hmd" if $indexfile =~ /^\s*$/;
+if (!-r $indexfile) {
+	$indexfile = "cache-index.hmd";
+}
+
+my %index = getCentToMd5Index($indexfile);
+
+my $sheeturl = "https://script.google.com/macros/s/$macroid/exec?format=aton&lang=en";
+my %entriesByCentid = getEntriesByCentid($sheeturl);
+
+foreach my $cenid (sort keys %index) {
+	createSpreadsheetFile($cenid, $index{$cenid});
+}
+
+exit(0);
+
+###########################################################################
+
+
+##############################
+##
+## createSpreadsheetFile --
+##
+
+sub createSpreadsheetFile {
+	my ($cenid, $md5) = @_;
+	my $targetdir = getTargetDir($md5, $cacheDepth);
+
+	die" Cannot find directory $targetdir\n" if !-d $targetdir;
+	my $entry = $entriesByCentid{$cenid};
+	return if $entry =~ /^\s*$/;
+
+	print "Creating $targetdir/$md5-spreadsheet.aton\n";
+	open(FILE, ">$targetdir/$md5-spreadsheet.aton") or die "Cannot write spreadsheet info\n";
+	print FILE $entry;
+	close FILE;
+}
+
+
+
+##############################
+##
+## getEntriesByCentid --
+##
+## @@BEGIN: ENTRY
+## @Sequence_number:	1753
+## @Author:		Anonim
+## @Title:			O gloriosa virginum
+## @Subtitle:
+## @Publication_date:
+## @RISM_siglum:		PL-SA
+## @Shelfmark:		92/A II 32
+## @Work_number:
+## @Subwork_number:
+## @Grouping:		W
+## @RISM_ID:		1001030094
+## @Scan:			YES
+## @XML:			NO
+## @KERN:			NO
+## @Diplomatic_kern:	NO
+## @Corrected_kern:	NO
+## @Edition_kern:		NO
+## @URL_resource:		http://bc.bdsandomierz.pl/dlibra/publication/1369/edition/1337/content
+## @Warnings:
+## @Filename:
+## @sheet:			1700
+## @cenid:		17xx:1753
+## @flags:	TIM
+## @lang:			en
+## @@END: ENTRY
+##
+
+sub getEntriesByCentid {
+	my ($dataurl) = @_;
+	my $command = "$wget \"$dataurl\" -O -";
+	my @contents = `$command`;
+	my %output;
+	my $entry;
+	my $cenid;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		chomp $line;
+		if ($line =~ /^\@\@BEGIN\s*:\s*ENTRY\s*$/) {
+			$entry = "";
+			$cenid = "";
+			next;
+		}
+		if ($line =~ /^\@\@END\s*:\s*ENTRY\s*$/) {
+			$entry .= addFlagInformation($index{$cenid}, $cenid);
+			if ($cenid !~ /^\s*$/) {
+				$output{$cenid} = $entry;
+			}
+			$cenid = "";
+			$entry = "";
+			next;
+		}
+		next if $line =~ /^\@sheet\s*:/;
+		next if $line =~ /^\@lang\s*:/;
+		$entry .= "$line\n";
+		if ($line =~ /^\@cent?id\s*:\s*(.*)\s*$/i) {
+			$cenid = $1;
+		}
+	}
+	return %output;
+}
+
+
+
+##############################
+##
+## addFlagInformation --
+##
+
+sub addFlagInformation {
+	my ($md5sum, $cenid) = @_;
+	if ($md5sum =~ /^\s*$/) {
+		return "!!!flags:\n";
+	}
+	my $output = "";
+
+	my $iiifQ    = "";
+	my $modernQ  = "";
+	my $singleQ  = "";
+	my $textQ    = "";
+	my $fbQ      = "";
+
+	my $hasXywh = 0;
+	my $hasIiif = 0;
+	my $hasMultiple = 0;
+
+	$md5sum =~ /^([0-9a-f])/;
+	my $prefix = $1;
+	my $file = "$1/$md5sum/$md5sum.krn";
+	open(HFILE, $file) or die "Cannot read $file\n";
+	my @contents = <HFILE>;
+	close @contents;
+	chomp @contents;
+	foreach my $line (@contents) {
+		$hasMultiple = 1 if $line =~ /\*\^/;
+		$hasXywh = 1     if $line =~ /^\*.*xywh/;
+		$hasIiif = 1     if $line =~ /^!!!IIIF/;
+		$textQ   = "T"   if $line =~ /^\*\*.*text/;
+		$fbQ     = "F"   if $line =~ /^\*\*.*fb/;
+		$fbQ     = "F"   if $line =~ /^\*\*.*fba/;
+		$modernQ = "M"   if $line =~ /^!!!filter-modern:/;
+	}
+
+	if ($hasXywh && $hasIiif) {
+		$iiifQ = "I";
+	} elsif ($hasXywh) {
+		$iiifQ = "i";
+	} elsif ($hasXywh) {
+		$iiifQ = "i";
+	}
+
+	if (!$hasMultiple) {
+		$singleQ = "S";
+	}
+
+	# F = has figured bass encodings
+	# I = has IIIF encodings (bounding boxes and IIIF manifest)
+	# i = has incomplete IIIF encodings (bounding boxes or IIIF manifest)
+	# M = has modern filter
+	# S = has non-splitting spines (simple voices)  This should be refined
+	# 	   so that only **kern spines are checked for split.
+	# T = has text (lyrics)
+	$output = "\@flags:\t\t\t$fbQ$iiifQ$modernQ$singleQ$textQ\n";
+
+	return $output;
+}
+
+
+
+##############################
+##
+## getCentToMd5Index --
+##
+
+sub getCentToMd5Index {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $cenidIndex = -1;
+	my $exinterp = 0;
+	my %output;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		chomp $line;
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index    = $j if $fields[$j] eq "**md5";
+				$cenidIndex = $j if $fields[$j] eq "**cenid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find Century ID column in index file\n" if $cenidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		my $cenid = $fields[$cenidIndex];
+		next if $cenid =~ /^\s*$/;
+		next if $cenid eq ".";
+		my $md5 = $fields[$md5Index];
+		$output{$cenid} = $md5;
+	}
+
+	return %output;
+}
+
+
+
+##############################
+##
+## getTargetDir --
+##
+
+sub getTargetDir {
+	my ($md5, $cacheDepth) = @_;
+	return $md5 if $cacheDepth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$cacheDepth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+

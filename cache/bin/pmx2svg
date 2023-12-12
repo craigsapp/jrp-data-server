@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+
+use HTTP::Request::Common;
+use LWP::UserAgent;
+ 
+my $data;
+my $line; 
+while ($line = <>) {
+   $data .= "$line";
+}
+
+$ua = LWP::UserAgent->new;
+my $response = $ua->request(
+     POST 'http://score.sapp.org/cgi-bin/score',
+     [
+        outputformat => 'svg',
+        embedpmx     => 'yes',
+        inputdata    => [$data],
+      ]
+   ); 
+
+if ($response->is_success) {
+   print $response->decoded_content;
+} else {
+   die $response->status_line;
+}

@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon 13 Sep 2021 11:53:13 AM PDT
+# Last Modified: Mon 13 Sep 2021 11:53:17 AM PDT
+# Filename:      cache/bin/derivative-musicxml
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create MusicXML file from Humdrum file.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+my $outputfile = "$md5id.musicxml";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$outputfile.gz";
+} elsif (-r "$outputfile.gz") {
+	unlink("$outputfile.gz");
+}
+
+my $tie = `which tie`;
+chomp $tie;
+die "Error: Cannot locate tie command\n" if $tie =~ /^\s*$/;
+
+my $humdrum2musicxml = `which humdrum2musicxml`;
+chomp $humdrum2musicxml;
+die "ERROR: Cannot locate humdrum2muscxml command\n" if $humdrum2musicxml =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
+
+my $command = "cat $inputfile | $tie -s | $humdrum2musicxml";
+my $output = `$command`;
+
+if ($output =~ /^\s*$/) {
+	die "$md5id: No data content. Command: $command\n";
+}
+
+if ($output =~ /Input data is too large/) {
+	die "$md5id: Input data is too large for MusicXML conversion.\n";
+}
+
+if ($output =~ /Can't connect to/) {
+	die "$md5id: Can't connect to server for MusicXML conversion.\n";
+}
+
+if ($output =~ /read timeout at/) {
+	die "$md5id: Read timeout downloading MusicXML conversion.\n";
+}
+
+if ((length($output) < 10000) && ($output =~ /Gateway Timeout/)) {
+	die "$md5id: Gateway Timeout.\n";
+}
+
+# Maybe also check if file contains some expected XML elements.
+
+open (FILE, ">$outputfile") or die "ERROR: Cannot write file $outputfile\n";
+print FILE $output;
+close FILE;
+
+print STDERR "Compressing $inputfile ...";
+`$gzip $outputfile`;
+print STDERR " Done.\n";
+
+
+

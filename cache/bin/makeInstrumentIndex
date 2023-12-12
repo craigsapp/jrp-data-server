@@ -1,0 +1,312 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Thu 10 Feb 2022 08:56:23 AM PST
+# Last Modified: Thu 10 Feb 2022 08:56:26 AM PST
+# Filename:      cache/bin/makeInstrumentIndex
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create a list of instrument codes that are used in the score,
+#                as well as their names in English and Polish.
+#
+
+use strict;
+use Getopt::Long;
+
+my $wget = `which wget`;
+chomp $wget;
+die "Cannot find wget program\n" if $wget =~ /^\s*$/;
+
+my $indexfile;
+Getopt::Long::Configure("bundling");
+GetOptions (
+	"i|index:s"    => \$indexfile
+);
+
+my %NameEN;  # Names for instrument codes in English.
+my %NamePL;  # Names for instrument codes in Polish.
+
+my $humInstUrl = "https://script.google.com/macros/s/AKfycbxtpzIBumhXjNd30fsWuFdsBco2EqrezXMsUxQ2lrylvwls1AMyI7MuLrW3qRh6_HDp/exec?format=aton";
+
+my $popcInstUrl = "https://script.google.com/macros/s/AKfycbwv9fNZ8GT9DS4QHTJT3o8KapDVt9pbG3aoOITNhVxztHvk1Nrlcg_zjf_pMi6pLUYVIA/exec?format=aton";
+
+buildInstrumentNames();
+
+
+$indexfile = "cache-index.hmd" if $indexfile =~ /^\s*$/;
+
+# Cache depth (number of subdirectory levels until file directories).
+my $cacheDepth = 1;
+$cacheDepth = 1 if $cacheDepth < 1;
+$cacheDepth = 1 if $cacheDepth > 3;
+
+my %index = getIndex($indexfile);
+
+my %INST;
+
+foreach my $key (sort keys %index) {
+	my $value = $index{$key};
+	my $basedir = getTargetDir($key, $cacheDepth);
+	processFile("$basedir/$key.krn");
+}
+
+my @keys = sort keys %INST;
+print "{\n";
+for (my $i=0; $i<@keys; $i++) {
+	my $key = $keys[$i];
+	print "\t\"$key\":\t{ \"code\":\"$key\", \"EN\":\"$NameEN{$key}\", \"PL\":\"$NamePL{$key}\" }";
+	if ($i < @keys - 1) {
+		print ",";
+	}
+	print "\n";
+}
+print "}\n";
+
+
+exit(0);
+
+###########################################################################
+
+
+##############################
+##
+## processFile --
+##
+
+sub processFile {
+	my ($file) = @_;
+	open (FILE, $file) or die "Cannot read $file\n";
+	my @contents = <FILE>;
+	close FILE;
+	chomp @contents;
+
+	# prefer to extract instruments from AIN record:
+	my $ain = 0;
+	my $count;
+	for (my $i = $#contents; $i>= 0; $i--) {
+		my $line = $contents[$i];
+		next if $line !~ /^!!!AIN:\s*(.*)\s*$/;
+		$ain = 1;
+		my @pieces = split(/[^a-zA-Z0-9_-]/, $line);
+		for (my $j=0; $j<@pieces; $j++) {
+			my $piece = $pieces[$j];
+			next if $piece !~ /^[a-z]/;
+			if ($j - 1 >= 0) {
+				if ($pieces[$j-1] =~ /^\d/) {
+					$count = $pieces[$j-1];
+				} else {
+					$count = 1;
+				}
+			} else {
+				$count = 1;
+			}
+			$INST{$piece} += $count;
+		}
+	}
+
+	return if $ain;
+
+	# otherwise search for instrument codes in interpretations
+	# (not worrying if the spine of the code is **kern):
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line !~ /^\*/;
+		my @data = split(/\t+/, $line);
+		for (my $j=0; $j<@data; $j++) {
+			my $field = $data[$j];
+			next if $field !~ /^\*I([a-z].*)\s*$/;
+			my $code = $1;
+			if ($code =~ /\&I/) {
+				my @pieces = split(/\&I/, $code);
+				foreach my $piece (@pieces) {
+					$INST{$piece}++;
+				}
+			} else {
+				$INST{$code}++;
+			}
+		}
+	}
+}
+
+
+
+##############################
+##
+## getTargetDir --
+##
+
+sub getTargetDir {
+	my ($md5, $cacheDepth) = @_;
+	return $md5 if $cacheDepth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$cacheDepth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+##############################
+##
+## getIndex --
+##
+
+sub getIndex {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $fileidIndex = -1;
+	my $exinterp = 0;
+	my %output;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index = $j if $fields[$j] eq "**md5";
+				$fileidIndex = $j if $fields[$j] eq "**fileid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		$output{$fields[$md5Index]} = $fields[$fileidIndex];
+	}
+	return %output;
+}
+
+
+
+##############################
+##
+## buildInstrumentNames --
+##
+
+sub buildInstrumentNames() {
+	my $command = "$wget \"$humInstUrl\" -O - 2> /dev/null";
+	my @huminst = `$command`;
+	chomp @huminst;
+	my $command2 = "$wget \"$popcInstUrl\" -O - 2> /dev/null";
+	my @popcinst = `$command2`;
+	chomp @popcinst;
+	die "Humdrum Instrument List data is missing" if @huminst < 10;
+	die "POPC2 Instrument List data is missing" if @popcinst < 10;
+
+	my $line = 0;
+	my %entry;
+
+	($line, %entry) = getEntry($line, @huminst);
+	while ($line < @huminst) {
+		my $code = $entry{"code"};
+		last if $code =~ /^\s*$/;
+		if ($code !~ /^[A-Z]/) {
+			my $english = $entry{"Name-EN"};
+			my $polish = $entry{"Name-PL"};
+			$NameEN{$code} = $english;
+			$NamePL{$code} = $polish;
+		}
+		($line, %entry) = getEntry($line, @huminst);
+	}
+
+	$line = 0;
+	($line, %entry) = getEntry($line, @popcinst);
+	while ($line < @popcinst) {
+		my $code = $entry{"Code"};
+		last if $code =~ /^\s*$/;
+		if ($code !~ /^[A-Z]/) {
+			my $english = $entry{"Name-EN"};
+			my $polish = $entry{"Name-PL"};
+			$NameEN{$code} = $english if $english !~ /^\s*$/;
+			$NamePL{$code} = $polish if $polish !~ /^\s*$/;
+		}
+		($line, %entry) = getEntry($line, @popcinst);
+	}
+
+}
+
+
+
+##############################
+##
+## getEntry --
+##
+## Example Humdrum Instrument entry:
+##
+## @@BEGIN: ENTRY
+## @code:			cor
+## @class:			bras
+## @type:			brass,wind,sorch,lorch,lips
+## @Name-EN:		(French) horn
+## @Name-FR:		cor
+## @Name-DE:		Horn
+## @Name-IT:		corno
+## @Name-ES:
+## @Name-PL:		róg
+## @Name-JA:		ホルン
+## @Name-EL:
+## @Name-LA:
+## @Wikipedia-EN:		https://en.wikipedia.org/wiki/French_horn
+## @Wikipedia-FR:
+## @Wikipedia-DE:
+## @Wikipedia-IT:
+## @Wikipedia-ES:
+## @Wikipedia-PL:		https://pl.wikipedia.org/wiki/R%C3%B3g_(instrument_muzyczny)
+## @Wikipedia-JA:		https://ja.wikipedia.org/wiki/%E3%83%9B%E3%83%AB%E3%83%B3
+## @Wikipedia-EL:
+## @Wikipedia-LA:
+## @@END: ENTRY
+##
+## POPC2 Instrument code example entry:
+##
+##@@BEGIN: ENTRY
+## @Count:			37
+## @Code:			arpa
+## @Name-EN:		harp
+## @Name-PL:		harfa
+## @@END: ENTRY
+##
+
+sub getEntry {
+	my ($index, @contents) = @_;
+	my %output;
+
+	# find next line that starts with @@BEGIN: ENTRY:
+	while ($index < @contents) {
+		last if $contents[$index] =~ /^\@\@BEGIN:\s*ENTRY\s*$/;
+		$index++;
+	}
+	if ($contents[$index] !~ /^\@\@BEGIN:\s*ENTRY\s*$/) {
+		$index = @contents + 1000;
+		return ($index, %output);
+	}
+
+	$index++;
+	while ($index < @contents) {
+		if ($contents[$index] =~ /^\@\@END:\s*ENTRY\s*$/) {
+			last;
+		}
+		# Assume the parameter is only on one line.
+		my $text = $contents[$index];
+		if ($text =~ /^\@([^@\s:]+):\s*(.+)\s*$/) {
+			my $key = $1;
+			my $value = $2;
+			$output{$key} = $value;
+		}
+		$index++;
+	}
+
+	return ($index, %output);
+}
+
+

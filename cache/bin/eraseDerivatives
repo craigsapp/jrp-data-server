@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Wed 15 Sep 2021 04:51:33 PM PDT
+# Last Modified: Mon 04 Oct 2021 08:19:48 PM PDT
+# Filename:      cache/bin/eraseDerivatives
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Erase derivative files of particular type from cache.
+#
+# Options:
+#    -d derivative  == List of derivatives that should be deleted (required).
+#                      Allowed derivative values:
+#                         mei      == MEI files
+#                         musicxml == MusicXML files
+#                         midi     == MIDI files
+#                         keyscape == keyscape plot images.
+#                         incipit  == Incipit SVG files
+#                         thema    == Thema search indexes
+#                         wordlist == Lyrics word lists.
+#
+
+use strict;
+use Getopt::Long;
+
+my $derivatives;
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'd|derivative|derivatives=s' => \$derivatives,
+);
+
+die "Usage: $0 -d derivative\n" if $derivatives =~ /^\s*$/;
+
+$derivatives =~ s/^[^0-9a-zA-Z_-]+//;
+$derivatives =~ s/[^0-9a-zA-Z_-]+$//;
+
+my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);
+
+my $bindir = `pwd`;
+chomp $bindir;
+$bindir =~ s/\/$//;
+if ($bindir !~ /\/bin$/) {
+	$bindir .= "/bin";
+}
+
+die "ERROR: Cannot find bin directory $bindir\n" if !-d $bindir;
+
+my $groups = "0123456789abcdef";
+my @dirs = split(//, $groups);
+foreach my $dir (@dirs) {
+	eraseDerivatives($dir);
+}
+
+exit(0);
+
+
+###########################################################################
+
+##############################
+##
+## eraseDerivatives --
+##
+
+sub eraseDerivatives {
+	my ($basedir) = @_;
+	return if !-d $basedir;
+	my @subdirs;
+	my @md5dirs;
+	opendir(DIR, $basedir) or die "Cannot read $basedir\n";
+	while (my $file = readdir(DIR)) {
+		next if $file =~ /^\./;
+		next if !-d "$basedir/$file";
+		if ($file =~ /^[0-9a-f]$/) {
+			$subdirs[@subdirs] = $file;
+		} elsif ($file =~ /^[0-9a-f]{8}$/) {
+			$md5dirs[@md5dirs] = $file;
+		}
+	}
+	foreach my $md5 (sort @md5dirs) {
+		eraseDerivativesForEntry($basedir, $md5);
+	}
+	foreach my $dir (sort @subdirs) {
+		eraseDerivatives("$basedir/$dir");
+	}
+}
+
+
+
+##############################
+##
+## eraseDerivativesForEntry --
+##
+
+sub eraseDerivativesForEntry {
+	my ($basedir, $md5) = @_;
+	die "Problem in basedir $basedir" if $basedir !~ /^[a-zA-Z0-9_\/-]+$/;
+	die "Problem in md5 $md5" if $md5 !~ /^[0-9a-f]{8}$/;
+	die "Cannot locate directory $basedir/$md5\n" if !-d "$basedir/$md5";
+	die "Cannot locate source file $basedir/$md5/$md5.krn\n" if !-r "$basedir/$md5/$md5.krn";
+	foreach my $derivative (@derivativeList) {
+		my $command;
+		if ($derivative eq "mei") {
+			$command = "(cd $basedir/$md5 && rm -f $md5.mei.gz)";
+		} elsif ($derivative eq "musicxml") {
+			$command = "(cd $basedir/$md5 && rm -f $md5.musicxml.gz)";
+		} elsif ($derivative eq "incipit") {
+			$command = "(cd $basedir/$md5 && rm -f $md5-incipit.svg.gz)";
+		} elsif ($derivative eq "midi") {
+			$command = "(cd $basedir/$md5 && rm -f $md5.mid)";
+		} elsif ($derivative eq "keyscsape") {
+			$command = "(cd $basedir/$md5 && rm -f $md5-keyscape*.png)";
+		} elsif ($derivative eq "mid") {
+			$command = "(cd $basedir/$md5 && rm -f $md5.mid)";
+		} elsif ($derivative eq "thema") {
+			$command = "(cd $basedir/$md5 && rm -f $md5*.thema)";
+		} elsif ($derivative eq "wordlist") {
+			$command = "(cd $basedir/$md5 && rm -f $md5-wordlist.txt)";
+		}
+		if ($command !~ /^\s*$/) {
+			`$command`;
+		}
+	}
+}
+
+
+

@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sun 06 Mar 2022 05:57:21 PM PST
+# Last Modified: Sat Aug 13 21:31:27 CEST 2022
+# Filename:      cache/bin/derivative-prange
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create instrument range plot.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if ($forceQ) {
+	unlink("$md5id-prange-attack.pmx.gz");
+	unlink("$md5id-prange-duration.pmx.gz");
+}
+unlink("$md5id-prange-attack.pmx");
+unlink("$md5id-prange-duration.pmx");
+
+my $prange = `which prange`;
+chomp $prange;
+die "ERROR: Cannot locate prange command\n" if $prange =~ /^\s*$/;
+
+my $pmx2svg = `which pmx2svg`;
+chomp $pmx2svg;
+die "ERROR: Cannot locate pmx2svg command\n" if $pmx2svg =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
+if (!-r "$md5id-prange-attack.pmx.gz") {
+	my $outputAttackPmx   = `$prange --score $inputfile`;
+	if ($outputAttackPmx =~ /^\s*$/) {
+		die "$md5id: No data for prange attack pmx content.\n";
+	}
+
+	open (FILE, ">$md5id-prange-attack.pmx") or die "ERROR: Cannot write file $md5id-prange-attack.pmx\n";
+	print FILE $outputAttackPmx;
+	close FILE;
+	unlink("$md5id-prange-attack.pmx.gz");
+	print STDERR "Compressing $md5id-prange-attack.pmx ...";
+	`$gzip $md5id-prange-attack.pmx`;
+	print STDERR " Done.\n";
+}
+
+if (!-r "$md5id-prange-duration.pmx.gz") {
+	my $outputDurationPmx = `$prange -d --score $inputfile`;
+	if ($outputDurationPmx =~ /^\s*$/) {
+		die "$md5id: No data for prange duration pmx content.\n";
+	}
+	open (FILE, ">$md5id-prange-duration.pmx") or die "ERROR: Cannot write file $md5id-prange-duration.pmx\n";
+	print FILE $outputDurationPmx;
+	close FILE;
+	print STDERR "Compressing $md5id-prange-duration.pmx ...";
+	unlink("$md5id-prange-duration.pmx.gz");
+	`$gzip $md5id-prange-duration.pmx`;
+	print STDERR " Done.\n";
+}
+
+
+

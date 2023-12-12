@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Fri 22 Oct 2021 10:45:54 AM PDT
+# Last Modified: Sat 23 Oct 2021 11:38:03 PM PDT
+# Filename:      cache/bin/derivative-keyscape
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create Keyscapes from Humdrum file:
+#                    *-keyscape-abspre.png   == Absolute color mapping
+#                    *-keyscape-relpre.png   == Relative color mapping
+#                    *-keyscape-abspost.png  == with post-processing
+#                    *-keyscape-relpost.png  == with post-processing
+#                    *-keyscape-info.json.gz == image timing data.
+# Also could do each of the for types in the 5 different weightings...
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$md5id-keyscape-abspre.png";
+} elsif (-r "$md5id-keyscape-abspre.png") {
+	unlink("$md5id-keyscape-abspre.png");
+	unlink("$md5id-keyscape-relpre.png");
+	unlink("$md5id-keyscape-abspost.png");
+	unlink("$md5id-keyscape-relpost.png");
+	unlink("$md5id-keyscape-info.json.gz");
+} elsif (-r "$md5id-keyscape-info.json.gz") {
+	unlink("$md5id-keyscape-abspre.png");
+	unlink("$md5id-keyscape-relpre.png");
+	unlink("$md5id-keyscape-abspost.png");
+	unlink("$md5id-keyscape-relpost.png");
+	unlink("$md5id-keyscape-info.json.gz");
+}
+
+my $mkeyscape = `which mkeyscape`;
+chomp $mkeyscape;
+die "ERROR: Cannot locate mkeyscape command\n" if $mkeyscape =~ /^\s*$/;
+
+my $scapeinfo = `which scapeinfo`;
+chomp $scapeinfo;
+die "ERROR: Cannot locate scapeinfo command\n" if $scapeinfo =~ /^\s*$/;
+
+my $convert = `which convert`;
+chomp $convert;
+die "ERROR: Cannot locate imagemagick's convert command\n" if $convert =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
+print STDERR "Creating keyscape files for $md5id ...";
+my $output;
+$output = `cat $inputfile | $mkeyscape -n | $convert - png:- > $md5id-keyscape-abspre.png`;
+$output = `cat $inputfile | transpose -k c | $mkeyscape -n | $convert - png:- > $md5id-keyscape-relpre.png`;
+$output = `cat $inputfile | $mkeyscape -n --trim | $convert - png:- > $md5id-keyscape-abspost.png`;
+$output = `cat $inputfile | transpose -k c | $mkeyscape -n --trim | $convert - png:- > $md5id-keyscape-relpost.png`;
+$output = `$scapeinfo $inputfile > $md5id-keyscape-info.json && $gzip $md5id-keyscape-info.json`;
+print STDERR " Done.\n";
+
+
+

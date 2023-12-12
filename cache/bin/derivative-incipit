@@ -1,0 +1,74 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Wed 20 Oct 2021 01:09:43 AM PDT
+# Last Modified: Wed 20 Oct 2021 01:09:47 AM PDT
+# Filename:      cache/bin/derivative-incipit
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create musical incipit from Humdrum file.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+my $outputfile = "$md5id-incipit.svg";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$outputfile.gz";
+} elsif (-r "$outputfile.gz") {
+	unlink("$outputfile.gz");
+}
+
+my $verovio = `which verovio`;
+chomp $verovio;
+die "ERROR: Cannot locate verovio command\n" if $verovio =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
+print STDERR "Creating $outputfile ...";
+my $command = "verovio --page-height 100 --scale 39";
+$command .= " --page-width 2500  --header none --adjust-page-height";
+
+my @contents = `cat $inputfile`;
+$contents[@contents] = "!!!filter: shed -e 's/LO:TX:.*t=P.*problem.*//L'\n";
+# Also add filter to remove SIC markers
+
+
+open(my $pipe, "|-", "$command - -o $outputfile");
+for (my $i=0; $i<@contents; $i++) {
+	print $pipe $contents[$i];
+}
+close $pipe;
+
+if (-r $outputfile) {
+	print STDERR " Compressing $outputfile ...";
+	`$gzip $outputfile`;
+} else {
+	print STDERR " PROBLEM...";
+}
+print STDERR " Done.\n";
+
+
+

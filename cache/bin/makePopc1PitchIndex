@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Mon 11 Oct 2021 03:52:33 PM PDT
+# Last Modified: Sun Aug 14 07:36:47 CEST 2022
+# Filename:      cache/bin/makePopc1PitchIndex
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Collate POPC-1 pitch indexes into a
+#                single index file.
+#
+
+use strict;
+
+
+use strict;
+use Getopt::Long;
+
+my $indexfile;
+Getopt::Long::Configure("bundling");
+GetOptions (
+	"i|index"    => \$indexfile
+);
+
+$indexfile = "cache-index-new.hmd" if $indexfile =~ /^\s*$/;
+$indexfile = "cache-index.hmd" if !-r $indexfile;
+die "Cannot read index file" if !-r $indexfile;
+
+
+# Cache depth (number of subdirectory levels until file directories).
+my $cacheDepth = 1;
+$cacheDepth = 1 if $cacheDepth < 1;
+$cacheDepth = 1 if $cacheDepth > 3;
+
+my %index = getIndex($indexfile);
+
+foreach my $key (sort keys %index) {
+	my $value = $index{$key};
+	next if $value =~ /^pl-/;   # ignore for POPC1 scores if from Poland
+	next if $value =~ /^s-/;    # ignore for POPC1 scores if from Sweden
+	next if $value =~ /^d-/;    # ignore for POPC1 scores if from Germany
+	next if $value =~ /^f-/;    # ignore for POPC1 scores if from France
+	next if $value =~ /^i-/;    # ignore for POPC1 scores if from Italy
+	next if $value =~ /^sk-/;   # ignore for POPC1 scores if from Slovakia
+	next if $value =~ /^cz-/;   # ignore for POPC1 scores if from Chechia
+	#print "$key\t$index{$key}\n";
+	my $basedir = getTargetDir($key, $cacheDepth);
+	my @contents = `cat $basedir/$key-pitch.thema`;
+	chomp @contents;
+	for (my $i=0; $i<@contents; $i++) {
+		next if $contents[$i] =~ /^\s*$/;
+		$contents[$i] =~ s/^$key\.krn/$value/;
+		$contents[$i] =~ s/\tM.*//;
+		$contents[$i] =~ s/\t[Zz][^\t]*//;
+		next if $contents[$i] =~ /\tJ\s*$/;
+		print "$contents[$i]\n";
+	}
+}
+
+
+
+exit(0);
+
+###########################################################################
+
+
+
+##############################
+##
+## getTargetDir --
+##
+
+sub getTargetDir {
+	my ($md5, $cacheDepth) = @_;
+	return $md5 if $cacheDepth == 0;
+	my @pieces = split(//, $md5);
+	my $output = "";
+	for (my $i=0; $i<$cacheDepth; $i++) {
+		$output .= $pieces[$i] . "/";
+	}
+	$output .= $md5;
+	return $output;
+}
+
+
+##############################
+##
+## getIndex --
+##
+
+sub getIndex {
+	my ($indexfile) = @_;
+	open(FILE, $indexfile) or die "Cannot read $indexfile\n";
+	my @contents = <FILE>;
+	chomp @contents;
+	close FILE;
+	my $md5Index    = -1;
+	my $fileidIndex = -1;
+	my $exinterp = 0;
+	my %output;
+	for (my $i=0; $i<@contents; $i++) {
+		my $line = $contents[$i];
+		next if $line =~ /^!/;
+		if ($line =~ /^\*\*/) {
+			$exinterp = 1;
+			my @fields = split(/\t+/, $line);
+			for (my $j=0; $j<@fields; $j++) {
+				$md5Index = $j if $fields[$j] eq "**md5";
+				$fileidIndex = $j if $fields[$j] eq "**fileid";
+			}
+			next;
+		}
+		next if $line =~ /^\*/;
+		next if !$exinterp;
+		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
+		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		my @fields = split(/\t+/, $line);
+		$output{$fields[$md5Index]} = $fields[$fileidIndex];
+	}
+	return %output;
+}
+
+
+
+

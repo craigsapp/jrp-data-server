@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sat 16 Oct 2021 08:31:39 AM PDT
+# Last Modified: Sat 16 Oct 2021 08:31:42 AM PDT
+# Filename:      cache/bin/derivative-midi
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create MIDI file from Humdrum file.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+my $outputfile = "$md5id.mid";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$outputfile";
+} elsif (-r "$outputfile") {
+	unlink("$outputfile");
+}
+
+my $hum2mid = `which hum2mid`;
+chomp $hum2mid;
+die "ERROR: Cannot locate hum2mid command\n" if $hum2mid =~ /^\s*$/;
+
+print STDERR "Creating $outputfile ...";
+my $output = `$hum2mid -CT $inputfile -o $outputfile`;
+print STDERR " Done.\n";
+
+
+
