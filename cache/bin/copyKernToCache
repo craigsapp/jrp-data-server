@@ -57,7 +57,7 @@ exit(0);
 ##
 
 sub copyFileToCache {
-	my ($md5, $fileid) = @_;
+	my ($md5, $jrpid) = @_;
 	my $targetdir = getTargetDir($md5, $cacheDepth);
 
 	# File is already in cache:
@@ -65,27 +65,27 @@ sub copyFileToCache {
 
 	die "ERROR: Target directory $targetdir is not a directory\n" if -r $targetdir;
 
-	my @srcfiles = glob("$kerndir/$fileid*.krn");
+	my @srcfiles = glob("$kerndir/$jrpid*.krn");
 	my $srcfile;
 	if (@srcfiles == 1) {
 		$srcfile = @srcfiles[0];
 	} elsif (@srcfiles == 0) {
-		die "ERROR: Cannot find file for $fileid\n";
+		die "ERROR: Cannot find file for $jrpid\n";
 	} else {
 		for (my $i=0; $i<@srcfiles; $i++) {
 			# POPC-2 filename:
-			if ($srcfiles[$i] =~ /\/${fileid}_.*\.krn$/) {
+			if ($srcfiles[$i] =~ /\/${jrpid}_.*\.krn$/) {
 				$srcfile = $srcfiles[$i];
 				last;
 			}
-			if ($srcfiles[$i] =~ /\/${fileid}.krn$/) {
+			if ($srcfiles[$i] =~ /\/${jrpid}.krn$/) {
 				$srcfile = $srcfiles[$i];
 				last;
 			}
 		}
 	}
 	if ($srcfile =~ /^\s*$/) {
-		die "ERRORB: Cannot find file for $fileid\n";
+		die "ERRORB: Cannot find file for $jrpid\n";
 	}
 
 	# Create target directory
@@ -130,7 +130,7 @@ sub getIndex {
 	chomp @contents;
 	close FILE;
 	my $md5Index    = -1;
-	my $fileidIndex = -1;
+	my $jrpidIndex = -1;
 	my $exinterp = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
@@ -141,16 +141,16 @@ sub getIndex {
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index    = $j if $fields[$j] eq "**md5";
-				$fileidIndex = $j if $fields[$j] eq "**fileid";
+				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
 		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		die "Cannot find FileId column in index file\n" if $jrpidIndex < 0;
 		my @fields = split(/\t+/, $line);
-		$output{$fields[$md5Index]} = $fields[$fileidIndex];
+		$output{$fields[$md5Index]} = $fields[$jrpidIndex];
 	}
 	return %output;
 }

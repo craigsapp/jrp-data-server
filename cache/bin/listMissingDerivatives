@@ -29,22 +29,22 @@ my $depth = 1;
 my $derivatives;
 my $centuryQ = 0;  # -c :: List century ID of missing derivative file.
 my $fileQ    = 0;  # -f :: List Humdrum filename of missing derivative file.
-my $fileidQ  = 0;  # -i :: List file ID of missing derivative file.
+my $jrpidQ  = 0;  # -i :: List file ID of missing derivative file.
 my $md5Q     = 0;  # -m :: List MD5 ID of missing derivativer file.
 Getopt::Long::Configure("bundling");
 GetOptions (
    'd|derivative|derivatives=s' => \$derivatives,
    'c|century' => \$centuryQ,
    'f|file'    => \$fileQ,
-   'i|fileid'  => \$fileidQ,
+   'i|jrpid'  => \$jrpidQ,
    'm|md5'     => \$md5Q
 );
 
 # Default missing file reporting style:
-if ((!$centuryQ) && (!$fileidQ) && (!$fileQ) && (!$md5Q)) {
+if ((!$centuryQ) && (!$jrpidQ) && (!$fileQ) && (!$md5Q)) {
 	$md5Q     = 1;
 	$centuryQ = 1;
-	$fileidQ  = 1;
+	$jrpidQ  = 1;
 }
 
 my $indexfile = "cache-index.hmd";
@@ -414,7 +414,7 @@ sub getIndex {
 	chomp @contents;
 	close FILE;
 	my $md5Index    = -1;
-	my $fileidIndex = -1;
+	my $jrpidIndex = -1;
 	my $centuryIndex = -1;
 	my $exinterp = 0;
 	my %output;
@@ -427,14 +427,14 @@ sub getIndex {
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index = $j if $fields[$j] eq "**md5";
 				$centuryIndex = $j if $fields[$j] eq "**cenid";
-				$fileidIndex = $j if $fields[$j] eq "**fileid";
+				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
 		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		die "Cannot find FileId column in index file\n" if $jrpidIndex < 0;
 		my @fields = split(/\t+/, $line);
 		my $value = "";
 		if ($md5Q && $md5Index >= 0) {
@@ -443,8 +443,8 @@ sub getIndex {
 		if ($centuryQ && $centuryIndex >= 0) {
 			$value .= $fields[$centuryIndex] . "\t";
 		}
-		if ($fileidQ && $fileidIndex >= 0) {
-			$value .= $fields[$fileidIndex] . "\t";
+		if ($jrpidQ && $jrpidIndex >= 0) {
+			$value .= $fields[$jrpidIndex] . "\t";
 		}
 		$value =~ s/\t+$//;
 		$output{$fields[$md5Index]} = $value;

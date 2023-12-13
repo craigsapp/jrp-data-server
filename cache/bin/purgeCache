@@ -136,7 +136,7 @@ sub getIndex {
 	chomp @contents;
 	close FILE;
 	my $md5Index    = -1;
-	my $fileidIndex = -1;
+	my $jrpidIndex = -1;
 	my $exinterp = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
@@ -147,16 +147,16 @@ sub getIndex {
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index = $j if $fields[$j] eq "**md5";
-				$fileidIndex = $j if $fields[$j] eq "**fileid";
+				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
 		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find FileId column in index file\n" if $fileidIndex < 0;
+		die "Cannot find FileId column in index file\n" if $jrpidIndex < 0;
 		my @fields = split(/\t+/, $line);
-		$output{$fields[$md5Index]} = $fields[$fileidIndex];
+		$output{$fields[$md5Index]} = $fields[$jrpidIndex];
 	}
 	return %output;
 }

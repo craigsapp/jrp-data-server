@@ -95,9 +95,9 @@ sub prepareEntry {
 	my $shelfwork = $references{"SMS-shelfwork"};
 	my $pmsid   = getPmsId(%references);
 	my $rismid  = getRismId(%references);
-	my $fileid = $references{"!SEGMENT"};
-	$fileid =~ s/\.krn//;
-	$fileid =~ s/_.*//;
+	my $jrpid = $references{"!SEGMENT"};
+	$jrpid =~ s/\.krn//;
+	$jrpid =~ s/_.*//;
 	my $flags = getFlags("$sourcedir/$md5-spreadsheet.aton");
 
 	$CNT = "undetermined" if $CNT =~ /^\s*$/;
@@ -106,7 +106,7 @@ sub prepareEntry {
 	my $output = "";
 	$output .= "\@\@BEGIN:\tENTRY\n";
 	$output .= "\@cenid:\t\t$cenid\n";
-	$output .= "\@fileid:\t$fileid\n";
+	$output .= "\@jrpid:\t$jrpid\n";
 	$output .= "\@rismid:\t$rismid\n";
 	$output .= "\@pmsid:\t\t$pmsid\n";
 	$output .= "\@siglum:\t$siglum\n";
