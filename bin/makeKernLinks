@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
-# Creation Date: Sun Aug 15 10:06:47 CEST 2021
-# Last Modified: Thu 23 Sep 2021 08:39:23 PM PDT
+# Creation Date: Thu Dec 14 05:17:35 AM PST 2023
+# Last Modified: Thu Dec 14 05:17:38 AM PST 2023
 # Filename:      bin/makeKernLinks
 # Syntax:        perl 5
 # vim:           ts=3
@@ -25,9 +25,9 @@ my $targetdir;       # Directory into which the symbolic links will be created.
 
 Getopt::Long::Configure("bundling");
 GetOptions (
-   't|target=s' => \$targetdir,
+   't|target=s' =>    \$targetdir,
    'r|recursive=s' => \$recursiveQ,
-   'v|verbose' => \$verboseQ
+   'v|verbose' =>     \$verboseQ
 );
 
 $targetdir = "kern" if !$targetdir;

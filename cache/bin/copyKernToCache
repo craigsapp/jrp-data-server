@@ -65,10 +65,13 @@ sub copyFileToCache {
 
 	die "ERROR: Target directory $targetdir is not a directory\n" if -r $targetdir;
 
-	my @srcfiles = glob("$kerndir/$jrpid*.krn");
+	my @srcfiles = glob("$kerndir/$jrpid-*.krn");
 	my $srcfile;
 	if (@srcfiles == 1) {
 		$srcfile = @srcfiles[0];
+	} elsif (@srcfiles > 1) {
+		$srcfile = @srcfiles[0];
+		print STDERR "Duplicate IDs for files: ", join(" ", @srcfiles), "\n";
 	} elsif (@srcfiles == 0) {
 		die "ERROR: Cannot find file for $jrpid\n";
 	} else {

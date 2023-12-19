@@ -31,6 +31,7 @@ die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
 my $inputfile = "$md5id.krn";
 my $outputfile = "$md5id.mid";
 
+
 die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
 
 if (!$forceQ) {
@@ -43,9 +44,102 @@ my $hum2mid = `which hum2mid`;
 chomp $hum2mid;
 die "ERROR: Cannot locate hum2mid command\n" if $hum2mid =~ /^\s*$/;
 
+my $jrpid = getJrpid($inputfile);
+
+my $met = "--met 232";  # Josquin and other composers' default tempo
+$met = "--met 252"  if $jrpid =~ "Oke";
+$met = "--met 252"  if $jrpid =~ "Ock";
+$met = "--met 252"  if $jrpid =~ "Bus";
+$met = "--met 252"  if $jrpid =~ "Reg";
+$met = "--met 252"  if $jrpid =~ "Tin";
+$met = "--met2 336" if $jrpid =~ "Duf";
+$met = "--met 336"  if $jrpid =~ "Bin";
+$met = "--met 336"  if $jrpid =~ "Fry";
+$met = "--tasso"    if $jrpid =~ "Trm";
+$met = "--tasso"    if $jrpid =~ "Tsg";
+$met = "--tasso"    if $jrpid =~ "Tam";
+$met = "--tasso"    if $jrpid =~ "Tec";
+$met = "--tasso"    if $jrpid =~ "Tri";
+$met = "--tasso"    if $jrpid =~ "Trt";
+$met = "--tasso"    if $jrpid =~ "Tco";
+
+if (hasMetronomeMarks($inputfile)) {
+	# Disable tempo based on composer
+	$met = "";
+}
+
+my %OPTIONS;
+$OPTIONS{'t_t'} = 70;     $OPTIONS{'v_t'} = 73;  # Tenor
+$OPTIONS{'t_c'} = 70;     $OPTIONS{'v_c'} = 70;  # Contra
+$OPTIONS{'t_b'} = 68;     $OPTIONS{'v_b'} = 70;  # Bassus
+$OPTIONS{'t_a'} = 71;     $OPTIONS{'v_a'} = 55;  # Altus
+$OPTIONS{'t_s'} = 74;     $OPTIONS{'v_s'} = 80;  # Superius
+$OPTIONS{'t_d'} = 75;     $OPTIONS{'v_d'} = 80;  # Discantus
+
+my $timbres  = "--timbres \'";
+$timbres .= "Tenor:i$OPTIONS{'t_t'},v$OPTIONS{'v_t'}";
+$timbres .= ";Contra:i$OPTIONS{'t_c'},v$OPTIONS{'v_c'}";
+$timbres .= ";Bassus:i$OPTIONS{'t_b'},v$OPTIONS{'v_b'}";
+$timbres .= ";Altus:i$OPTIONS{'t_a'},v$OPTIONS{'v_a'}";
+$timbres .= ";Superius:i$OPTIONS{'t_s'},v$OPTIONS{'v_s'}";
+$timbres .= ";Cantus:i$OPTIONS{'t_s'},v$OPTIONS{'v_s'}";
+$timbres .= ";Discantus:i$OPTIONS{'t_d'},v$OPTIONS{'v_d'}";
+$timbres .= ";Quintus$OPTIONS{'t_d'},v$OPTIONS{'v_d'}";
+$timbres .= ";DEFAULT:i$OPTIONS{'t_a'},v$OPTIONS{'v_a'}\'";
+
 print STDERR "Creating $outputfile ...";
-my $output = `$hum2mid -CT $inputfile -o $outputfile`;
+my $command = "$hum2mid $met --autopan $timbres -CT $inputfile -o $outputfile";
+my $output = `$command`;
 print STDERR " Done.\n";
+# print STDERR "\t$command\n";
+
+
+exit(0);
+
+
+###########################################################################
+
+
+##############################
+##
+## hasMetronomeMarks --
+##
+
+sub hasMetronomeMarks {
+	my ($humfile) = @_;
+	open (HFILE, $humfile) or return 0;
+	while (my $line = <HFILE>) {
+		if ($line =~ /\*MM\d/) {
+			close HFILE;
+			return 1;
+		}
+	}
+	close HFILE;
+	return 0;
+}
+
+
+
+##############################
+##
+## getJrpid --
+##
+
+sub getJrpid {
+	my ($humfile) = @_;
+	open (HFILE, $humfile) or return "";
+	while (my $line = <HFILE>) {
+		chomp $line;
+		if ($line =~ /^!!!SCA:\s*(.*)\s*$/) {
+			close HFILE;
+			return $1;
+		}
+	}
+	close HFILE;
+	return "";
+}
+
+
 
 
 

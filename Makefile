@@ -23,7 +23,7 @@
 # KERNREPOS: This is a list of all of the directories where Humdrum files
 # are located that should be incorporated into this data server for the
 # files.
-KERNREPOS =  ../jrp-scores/*/kern
+KERNREPOS =  ../jrp-scores ../1520s-project-scores/humdrum
 
 # TARGETDIR: The directory into which symbolic links to Humdrum files in the
 # KERNREPOS directory list are located.
@@ -104,7 +104,7 @@ SETSEBOOL := $(shell which setsebool 2> /dev/null)
 CHCON := $(shell which chcon 2> /dev/null)
 
 initialize:
-	mkdir -p $(LOGDIR)
+	-mkdir -p $(LOGDIR)
 	chown -R $(WEBSERVERUSER).$(WEBSERVERGROUP) $(LOGDIR)
 
 # SELinux setup:

@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Sat Dec 16 10:50:37 AM PST 2023
+# Last Modified: Sat Dec 16 10:50:40 AM PST 2023
+# Filename:      cache/bin/derivative-mp3
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create MP3 file from MIDI file.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.mid";
+my $outputfile = "$md5id.mp3";
+
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if (!$forceQ) {
+	exit 0 if -r "$outputfile";
+} elsif (-r "$outputfile") {
+	unlink("$outputfile");
+}
+
+my $timidity = `which timidity`;
+chomp $timidity;
+die "ERROR: Cannot locate timidity command\n" if $timidity =~ /^\s*$/;
+
+my $lame = `which lame`;
+chomp $lame;
+die "ERROR: Cannot locate lame command\n" if $lame =~ /^\s*$/;
+
+print STDERR "Creating $outputfile ...";
+my $command = "$timidity $inputfile -Ow -o - | lame -V2 - > $outputfile";
+my $output = `$command`;
+print STDERR " Done.\n";
+# print STDERR "\t$command\n";
+
+
+
+

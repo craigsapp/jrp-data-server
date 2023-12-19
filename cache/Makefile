@@ -189,14 +189,11 @@ erase-cache:
 ##     is related to which index file is read for preparing the indexes.
 ##
 
-indexes-new: indexes-new-popc1 indexes-new-popc2 siglum-index instrument-index-new
-indexes: indexes-popc1 indexes-popc2 siglum-index instrument-index
+indexes-new: indexes-new-popc2 siglum-index instrument-index-new
+indexes: indexes-popc2 siglum-index instrument-index
 
 indexes-new-popc2: popc2-score-index-new popc2-lyrics-index-new popc2-composer-index popc2-pitch-index instrument-index-new
 indexes-popc2: popc2-score-index popc2-lyrics-index popc2-composer-index popc2-pitch-index instrument-index
-
-indexes-new-popc1: popc1-score-index-new popc1-lyrics-index-new popc1-composer-index popc1-pitch-index instrument-index-new
-indexes-popc1: popc1-score-index popc1-lyrics-index popc1-composer-index popc1-pitch-index instrument-index
 
 
 popc2-score-index-new:
@@ -217,27 +214,10 @@ popc2-score-index:
 	(cd indexes; gzip popc2-score-index.json)
 	(cd indexes; gzip popc2-score-index.aton)
 
-popc1-score-index-new:
-	@mkdir -p indexes
-	-rm -f indexes/popc1-score-index.aton.gz
-	-rm -f indexes/popc1-score-index.json.gz
-	bin/makePopc1ScoreIndex -i cache-index-new.hmd > indexes/popc1-score-index.aton
-	(cd indexes; aton2json popc1-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > popc1-score-index.json)
-	(cd indexes; gzip popc1-score-index.json)
-	(cd indexes; gzip popc1-score-index.aton)
 
-popc1-score-index:
-	@mkdir -p indexes
-	-rm -f indexes/popc1-score-index.aton.gz
-	-rm -f indexes/popc1-score-index.json.gz
-	bin/makePopc1ScoreIndex -i cache-index.hmd > indexes/popc1-score-index.aton
-	(cd indexes; aton2json popc1-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > popc1-score-index.json)
-	(cd indexes; gzip popc1-score-index.json)
-	(cd indexes; gzip popc1-score-index.aton)
+lyrics-index-new: popc2-lyrics-index-new
+lyrics-index: popc2-lyrics-index
 
-
-lyrics-index-new: popc2-lyrics-index-new popc1-lyrics-index-new
-lyrics-index: popc2-lyrics-index popc1-lyrics-index
 
 popc2-lyrics-index-new:
 	@mkdir -p indexes
@@ -245,23 +225,13 @@ popc2-lyrics-index-new:
 	bin/makePopc2LyricsIndex -i cache-index-new.hmd > indexes/popc2-lyrics-index.txt
 	(cd indexes; gzip popc2-lyrics-index.txt)
 
+
 popc2-lyrics-index:
 	@mkdir -p indexes
 	-rm -f indexes/popc2-lyrics-index.txt.gz
 	bin/makePopc2LyricsIndex -i cache-index.hmd > indexes/popc2-lyrics-index.txt
 	(cd indexes; gzip popc2-lyrics-index.txt)
 
-popc1-lyrics-index-new:
-	@mkdir -p indexes
-	-rm -f indexes/popc1-lyrics-index.txt.gz
-	bin/makePopc1LyricsIndex -i cache-index-new.hmd > indexes/popc1-lyrics-index.txt
-	(cd indexes; gzip popc1-lyrics-index.txt)
-
-popc1-lyrics-index:
-	@mkdir -p indexes
-	-rm -f indexes/popc1-lyrics-index.txt.gz
-	bin/makePopc1LyricsIndex -i cache-index.hmd > indexes/popc1-lyrics-index.txt
-	(cd indexes; gzip popc1-lyrics-index.txt)
 
 instrument-index-new:
 	@mkdir -p indexes
@@ -276,7 +246,7 @@ instrument-index:
 	(cd indexes; gzip instrument-index.json)
 
 
-composer-index: popc2-composer-index popc1-composer-index
+composer-index: popc2-composer-index
 
 
 popc2-composer-index:
@@ -287,7 +257,6 @@ popc2-composer-index:
 	(cd indexes; gzip popc2-composer-index.aton)
 	(cd indexes; gzip popc2-composer-index.json)
 
-popc1-composer-index:
 
 siglum-index:
 	-rm -f indexes/siglum-index.aton.gz
@@ -319,6 +288,7 @@ other-derivatives: regenerate-spreadsheet-new
 ##   lyrics:    Extract lyrics by part from file.
 ##   mei:       Convert Humdrum files to MEI files.
 ##   midi:      Convert Humdrum files to MIDI files.
+##   mp3:       Convert MIDI files into MP3 files.
 ##   musicxml:  Convert Humdrum files to MusicXML files.
 ##   prange:    Convert Humdrum files into prange plot images.
 ##   thema:     Generate thema search indexes.
@@ -333,7 +303,7 @@ regenerate-all:
 missing-all:
 	@bin/listMissingDerivatives -mcf
 
-erase-all: erase-mei erase-musicxml erase-midi erase-keyscape erase-prange erase-thema erase-wordlist erase-lyrics
+erase-all: erase-mei erase-musicxml erase-midi erase-mp3 erase-keyscape erase-prange erase-thema erase-wordlist erase-lyrics
 
 
 ##############################
@@ -414,6 +384,25 @@ erase-midi:
 
 ##############################
 ##
+## MP# conversions.
+##
+
+generate-mp3:
+	bin/makeDerivatives -v -d mp3
+
+regenerate-mp3:
+	bin/makeDerivatives -f -d mp3
+
+missing-mp3:
+	@bin/listMissingDerivatives -d mp3 -mcf
+
+erase-mp3:
+	bin/eraseDerivatives -d mp3
+
+
+
+##############################
+##
 ## Keyscape conversions.
 ##
 
@@ -486,7 +475,6 @@ missing-thema:
 erase-thema:
 	bin/eraseDerivatives -d thema
 	rm -f indexes/popc2-pitch-index.txt.gz
-	rm -f indexes/popc1-pitch-index.txt.gz
 
 
 
@@ -533,10 +521,10 @@ erase-lyrics:
 # work thema files are created).
 #
 
-cache-thema: popc2-pitch-index popc1-pitch-index
-thema-cache: popc2-pitch-index popc1-pitch-index
-ct: popc2-pitch-index popc1-pitch-index
-tc: popc2-pitch-index popc1-pitch-index
+cache-thema: popc2-pitch-index
+thema-cache: popc2-pitch-index
+ct: popc2-pitch-index
+tc: popc2-pitch-index
 
 popc2-thema-pitch-index: popc2-pitch-index
 popc2-cache-thema: popc2-pitch-index
@@ -545,15 +533,6 @@ popc2-pitch-index:
 	-rm -f indexes/popc2-pitch-index.txt.gz
 	bin/makePopc2PitchIndex > indexes/popc2-pitch-index.txt
 	gzip indexes/popc2-pitch-index.txt
-
-popc1-thema-pitch-index: popc1-pitch-index
-popc1-cache-thema: popc1-pitch-index
-popc1-thema-cache: popc1-pitch-index
-popc1-pitch-index:
-	-rm -f indexes/popc1-pitch-index.txt.gz
-	bin/makePopc1PitchIndex > indexes/popc1-pitch-index.txt
-	gzip indexes/popc1-pitch-index.txt
-
 
 
 ###########################################################################

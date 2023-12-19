@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
-# Creation Date: Sun 12 Sep 2021 07:37:36 PM PDT
-# Last Modified: Mon 05 Sep 2022 05:09:02 AM PDT
+# Creation Date: Wed Dec 13 09:33:28 AM PST 2023
+# Last Modified: Wed Dec 13 09:33:31 AM PST 2023
 # Filename:      jrp-data-server/cgi-bin/jrp-data-server.pl
 # Syntax:        perl 5
 # vim:           ts=3
@@ -18,13 +18,16 @@
 #    Quasi-score ids:
 #       random    ==  Get random score from cache.
 #    Static cached formats:
-#       krn       == Humdrum data file.
-#       mei       == Conversion to MEI data.
-#       mid       == Conversion to MIDI data.
-#       keyscape-abspre  == Keyscape (absolute, preprocessed)
-#       keyscape-relpre  == Keyscape (relative, preprocessed)
-#       keyscape-abspost == Keyscape (absolute, postprocessed)
-#       keyscape-relpost == Keyscape (relative, postprocessed)
+#       *.krn     == Humdrum data file.
+#       *.mei     == Conversion to MEI data.
+#       *.mid     == Conversion to MIDI data.
+#       *.mp3     == Conversion of MIDI data to MP3 audio file.
+#       *-prange-attack.svg    == Pitch range plot
+#       *-prange-duration.svg  == Pitch range plot, weighted by durations
+#       *-keyscape-abspre.png  == Keyscape (absolute, preprocessed)
+#       *-keyscape-relpre.png  == Keyscape (relative, preprocessed)
+#       *-keyscape-abspost.png == Keyscape (absolute, postprocessed)
+#       *-keyscape-relpost.png == Keyscape (relative, postprocessed)
 #       keyscape-info    == Keyscape image timing info
 #       musicxml  == Conversion to MusicXML data.
 #          https://data.josqu.in/Jos2721.musicxml
@@ -52,10 +55,10 @@ my $newline = "\r\n";
 ##
 
 # basedir == The location of the files for the website.
-my $basedir    = "/project/data-server-jrp/data-server-jrp";
+my $basedir    = "/project/jrp-data-server/jrp-data-server";
 
 # logdir == directory where access logs are stored.
-my $logdir     =  "/project/data-server-jrp/data-server-jrp/logs";
+my $logdir     =  "/project/jrp-data-server/jrp-data-server/logs";
 
 # cachedir == The absolute path to the cache directory.
 my $cachedir   = "$basedir/cache";
@@ -175,6 +178,12 @@ sub processParameters {
 		sendDataContent($format, $id, @md5s);
 	} elsif ($format eq "midi") {
 		sendDataContent("midi", $id, @md5s);
+	} elsif ($format eq "prange-duration.svg") {
+		sendDataContent("prange-duration-svg", $id, @md5s);
+	} elsif ($format eq "prange-attack.svg") {
+		sendDataContent("prange-attack-svg", $id, @md5s);
+	} elsif ($format eq "mp3") {
+		sendDataContent("mp3", $id, @md5s);
 	} elsif ($format eq "lyrics") {
 		sendDataContent("lyrics", $id, @md5s);
 	} elsif ($format eq "lyrics-modern") {
@@ -188,7 +197,7 @@ sub processParameters {
 		sendDataContent($format, $id, @md5s);
 	}
 
-	errorMessage("Unknown data format: $format");
+	errorMessage("Unknown data format: $format for ID $id");
 }
 
 
@@ -216,8 +225,14 @@ sub sendDataContent {
 		sendKeyscapeInfoContent($md5s[0]);
 	} elsif ($format =~ /^keyscape/) {
 		sendKeyscapeContent($md5s[0], $format);
+	} elsif ($format =~ /prange-duration/) {
+		sendSvgContent("prange-duration", $md5s[0]);
+	} elsif ($format =~ /prange-attack/) {
+		sendSvgContent("prange-attack", $md5s[0]);
 	} elsif ($format eq "mid") {
 		sendMidiContent($md5s[0]);
+	} elsif ($format eq "mp3") {
+		sendMp3Content($md5s[0]);
 	} elsif ($format eq "midi") {
 		sendMidiContent($md5s[0]);
 	} elsif ($format eq "lyrics") {
@@ -347,6 +362,57 @@ sub sendHumdrumContent {
 		print "$newline";
 		print $data;
 	}
+	exit(0);
+}
+
+
+
+##############################
+##
+## sendSvgContent -- Send duration or attack based prange plot.
+##
+## Known formats:
+##    prange-attack     == pitch range by note attacks
+##    prange-duration   == pitch range by note durations
+##
+
+sub sendSvgContent {
+	my ($format, $md5) = @_;
+
+	my $compressQ = 0;
+	$compressQ = 1 if $ENV{'HTTP_ACCEPT_ENCODING'} =~ /\bgzip\b/;
+
+	$md5 =~ /^(.)/;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $filename = "$cachedir/$cdir/$md5";
+	if ($format eq "prange-duration") {
+		$filename .= "-prange-duration.svg.gz";
+	} elsif ($format eq "attack-svg") {
+		$filename .= "-prange-attack.svg.gz";
+	} else {
+		errorMessage("sendSvgContent: Unknown format $format\n");
+	}
+
+	if (!-r $filename) {
+		errorMessage("SVG file is missing for $OPTIONS{'id'} format $format.");
+	}
+
+	my $mime = "image/svg+xml";
+
+	if ($compressQ) {
+		my $data = `cat "$filename"`;
+		print "Content-Type: $mime$newline";
+		print "Content-Encoding: gzip$newline";
+		print "$newline";
+		print $data;
+		exit(0);
+	}
+
+	my $data = `zcat "$filename"`;
+	print "Content-Type: $mime$newline";
+	print "$newline";
+	print $data;
+	print "FILENAMEB: $filename\n";
 	exit(0);
 }
 
@@ -542,6 +608,27 @@ sub sendMidiContent {
 
 ##############################
 ##
+## sendMp3Content -- (Static content) Send MP3 conversion of MIDI data.
+##
+
+sub sendMp3Content {
+	my ($md5) = @_;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $format = "mp3";
+	my $mime = "audio/mpeg";
+
+	my $data = `cat "$cachedir/$cdir/$md5.$format"`;
+	print "Content-Type: $mime$newline";
+	print "Content-Disposition: attachment; filename=\"data.mp3\"$newline";
+	print "$newline";
+	print $data;
+	exit(0);
+}
+
+
+
+##############################
+##
 ## sendLyricsContent -- Extract lyrics from score and serve as HTML file.
 ##
 
@@ -712,6 +799,11 @@ sub splitFormatFromId {
 	# Default format is Humdrum data
 	if ($format =~ /^\s*$/) {
 		$format = "krn";
+	}
+
+	if ($id =~ /([^-]+)-(.*)$/) {
+		$id = $1;
+		$format = "$2.$format";
 	}
 
 	$format = cleanFormat($format);
@@ -980,12 +1072,12 @@ sub cleanId {
 	$id =~ s/\s+$//;
 
 	# Remove any format appendix
-	$id =~ s/\.[a-zA-Z0-9_-]+$//;
+	# $id =~ s/\.[a-zA-Z0-9_-]+$//;
 
-	# Remove _composer--title information for POPC-2:
-	if ($id =~ /^(pl-[^_]+)_.*$/) {
-		$id = $1;
-	}
+	# Remove _composer--title information:
+	#if ($id =~ /^(pl-[^_]+)_.*$/) {
+	#	$id = $1;
+	#}
 
 	return $id;
 }

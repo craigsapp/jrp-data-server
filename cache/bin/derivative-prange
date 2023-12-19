@@ -2,12 +2,14 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Sun 06 Mar 2022 05:57:21 PM PST
-# Last Modified: Sat Aug 13 21:31:27 CEST 2022
+# Last Modified: Mon Dec 18 06:19:53 AM PST 2023
 # Filename:      cache/bin/derivative-prange
 # Syntax:        perl 5
 # vim:           ts=3
 #
-# Description:   Create instrument range plot.
+# Description:   Create pitch range plots, one duration-weighted, and the other by note attacks.
+#                Two files are created for each plot (1) PMX file for rendering in SCORE, and
+#                another the final SVG image.
 #
 # Options:
 #     -f   == Force recalculation of derivative files (overwrite).
@@ -15,6 +17,18 @@
 
 use strict;
 use Getopt::Long;
+
+my $prange = `which prange`;
+chomp $prange;
+die "ERROR: Cannot locate prange command\n" if $prange =~ /^\s*$/;
+
+my $pmx2svg = `which pmx2svg`;
+chomp $pmx2svg;
+die "ERROR: Cannot locate pmx2svg command\n" if $pmx2svg =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 my $forceQ = 0;
 Getopt::Long::Configure("bundling");
@@ -35,24 +49,25 @@ die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
 if ($forceQ) {
 	unlink("$md5id-prange-attack.pmx.gz");
 	unlink("$md5id-prange-duration.pmx.gz");
+	unlink("$md5id-prange-attack.svg.gz");
+	unlink("$md5id-prange-duration.svg.gz");
 }
+
+# Delete any uncompressed files:
 unlink("$md5id-prange-attack.pmx");
 unlink("$md5id-prange-duration.pmx");
+unlink("$md5id-prange-attack.svg");
+unlink("$md5id-prange-duration.svg");
 
-my $prange = `which prange`;
-chomp $prange;
-die "ERROR: Cannot locate prange command\n" if $prange =~ /^\s*$/;
+# If full file pairs are not present, then delete solo file:
+unlink("$md5id-prange-attack.svg.gz") if !-r "$md5id-prange-attack.pmx.gz";
+unlink("$md5id-prange-attack.pmx.gz") if !-r "$md5id-prange-attack.svg.gz";
+unlink("$md5id-prange-duration.svg.gz") if !-r "$md5id-prange-duration.pmx.gz";
+unlink("$md5id-prange-duration.pmx.gz") if !-r "$md5id-prange-duration.svg.gz";
 
-my $pmx2svg = `which pmx2svg`;
-chomp $pmx2svg;
-die "ERROR: Cannot locate pmx2svg command\n" if $pmx2svg =~ /^\s*$/;
-
-my $gzip = `which gzip`;
-chomp $gzip;
-die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 if (!-r "$md5id-prange-attack.pmx.gz") {
-	my $outputAttackPmx   = `$prange --score $inputfile`;
+	my $outputAttackPmx   = `$prange --hover --score $inputfile`;
 	if ($outputAttackPmx =~ /^\s*$/) {
 		die "$md5id: No data for prange attack pmx content.\n";
 	}
@@ -67,7 +82,7 @@ if (!-r "$md5id-prange-attack.pmx.gz") {
 }
 
 if (!-r "$md5id-prange-duration.pmx.gz") {
-	my $outputDurationPmx = `$prange -d --score $inputfile`;
+	my $outputDurationPmx = `$prange --hover -d --score $inputfile`;
 	if ($outputDurationPmx =~ /^\s*$/) {
 		die "$md5id: No data for prange duration pmx content.\n";
 	}
@@ -78,6 +93,14 @@ if (!-r "$md5id-prange-duration.pmx.gz") {
 	unlink("$md5id-prange-duration.pmx.gz");
 	`$gzip $md5id-prange-duration.pmx`;
 	print STDERR " Done.\n";
+}
+
+if (!-r "$md5id-prange-duration.svg.gz") {
+	`zcat $md5id-prange-duration.pmx.gz | $pmx2svg > $md5id-prange-duration.svg && gzip $md5id-prange-duration.svg`;
+}
+
+if (!-r "$md5id-prange-attack.svg.gz") {
+	`zcat $md5id-prange-attack.pmx.gz | $pmx2svg > $md5id-prange-attack.svg && gzip $md5id-prange-attack.svg`;
 }
 
 

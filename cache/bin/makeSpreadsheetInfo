@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
-# Creation Date: Sat 18 Sep 2021 02:36:31 PM PDT
-# Last Modified: Sat 18 Sep 2021 02:36:34 PM PDT
+# Creation Date: Thu Dec 14 07:33:01 AM PST 2023
+# Last Modified: Thu Dec 14 07:33:04 AM PST 2023
 # Filename:      cache/bin/makeSpreadsheetInfo
 # Syntax:        perl 5
 # vim:           ts=3
@@ -24,7 +24,8 @@ my $wget = `which wget`;
 chomp $wget;
 die "Cannot find wget program\n" if $wget =~ /^\s*$/;
 
-my $macroid = "AKfycbyO24ZeK-WYDf5UC5YVvsz2AR0vzVc0stn7COaj6oe-Wk3AkcHw8OaR9_zj4y3cQEDGPA";
+# Sheet URL: https://docs.google.com/spreadsheets/d/1KBXyuyE4pfJ61UtQBEfEwLp-vjoyFO_fbUU03DOsiGU/edit#gid=0
+my $macroid = "AKfycbyeHfmyCHHgbY9X_UDMzW9xyRgqH0c7Ycp76NTW18mjZSnW_2umhgH2ZGDtxuwDot6mKw";
 my $indexfile;
 Getopt::Long::Configure("bundling");
 GetOptions (
@@ -40,10 +41,10 @@ if (!-r $indexfile) {
 my %index = getCentToMd5Index($indexfile);
 
 my $sheeturl = "https://script.google.com/macros/s/$macroid/exec?format=aton&lang=en";
-my %entriesByCentid = getEntriesByCentid($sheeturl);
+my %entriesByJrpid = getEntriesByJrpid($sheeturl);
 
-foreach my $cenid (sort keys %index) {
-	createSpreadsheetFile($cenid, $index{$cenid});
+foreach my $jrpid (sort keys %index) {
+	createSpreadsheetFile($jrpid, $index{$jrpid});
 }
 
 exit(0);
@@ -57,11 +58,11 @@ exit(0);
 ##
 
 sub createSpreadsheetFile {
-	my ($cenid, $md5) = @_;
+	my ($jrpid, $md5) = @_;
 	my $targetdir = getTargetDir($md5, $cacheDepth);
 
 	die" Cannot find directory $targetdir\n" if !-d $targetdir;
-	my $entry = $entriesByCentid{$cenid};
+	my $entry = $entriesByJrpid{$jrpid};
 	return if $entry =~ /^\s*$/;
 
 	print "Creating $targetdir/$md5-spreadsheet.aton\n";
@@ -74,65 +75,38 @@ sub createSpreadsheetFile {
 
 ##############################
 ##
-## getEntriesByCentid --
-##
-## @@BEGIN: ENTRY
-## @Sequence_number:	1753
-## @Author:		Anonim
-## @Title:			O gloriosa virginum
-## @Subtitle:
-## @Publication_date:
-## @RISM_siglum:		PL-SA
-## @Shelfmark:		92/A II 32
-## @Work_number:
-## @Subwork_number:
-## @Grouping:		W
-## @RISM_ID:		1001030094
-## @Scan:			YES
-## @XML:			NO
-## @KERN:			NO
-## @Diplomatic_kern:	NO
-## @Corrected_kern:	NO
-## @Edition_kern:		NO
-## @URL_resource:		http://bc.bdsandomierz.pl/dlibra/publication/1369/edition/1337/content
-## @Warnings:
-## @Filename:
-## @sheet:			1700
-## @cenid:		17xx:1753
-## @flags:	TIM
-## @lang:			en
-## @@END: ENTRY
+## getEntriesByJrpid --
 ##
 
-sub getEntriesByCentid {
+sub getEntriesByJrpid {
 	my ($dataurl) = @_;
 	my $command = "$wget \"$dataurl\" -O -";
 	my @contents = `$command`;
 	my %output;
 	my $entry;
-	my $cenid;
+	my $jrpid;
 	for (my $i=0; $i<@contents; $i++) {
 		my $line = $contents[$i];
 		chomp $line;
 		if ($line =~ /^\@\@BEGIN\s*:\s*ENTRY\s*$/) {
 			$entry = "";
-			$cenid = "";
+			$jrpid = "";
 			next;
 		}
 		if ($line =~ /^\@\@END\s*:\s*ENTRY\s*$/) {
-			$entry .= addFlagInformation($index{$cenid}, $cenid);
-			if ($cenid !~ /^\s*$/) {
-				$output{$cenid} = $entry;
+			$entry .= addFlagInformation($index{$jrpid}, $jrpid);
+			if ($jrpid !~ /^\s*$/) {
+				$output{$jrpid} = $entry;
 			}
-			$cenid = "";
+			$jrpid = "";
 			$entry = "";
 			next;
 		}
 		next if $line =~ /^\@sheet\s*:/;
 		next if $line =~ /^\@lang\s*:/;
 		$entry .= "$line\n";
-		if ($line =~ /^\@cent?id\s*:\s*(.*)\s*$/i) {
-			$cenid = $1;
+		if ($line =~ /^\@WORK_ID\s*:\s*(.*)\s*$/i) {
+			$jrpid = $1;
 		}
 	}
 	return %output;
@@ -146,7 +120,7 @@ sub getEntriesByCentid {
 ##
 
 sub addFlagInformation {
-	my ($md5sum, $cenid) = @_;
+	my ($md5sum, $jrpid) = @_;
 	if ($md5sum =~ /^\s*$/) {
 		return "!!!flags:\n";
 	}
@@ -217,7 +191,7 @@ sub getCentToMd5Index {
 	chomp @contents;
 	close FILE;
 	my $md5Index    = -1;
-	my $cenidIndex = -1;
+	my $jrpidIndex = -1;
 	my $exinterp = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
@@ -229,20 +203,20 @@ sub getCentToMd5Index {
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index    = $j if $fields[$j] eq "**md5";
-				$cenidIndex = $j if $fields[$j] eq "**cenid";
+				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
 		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find Century ID column in index file\n" if $cenidIndex < 0;
+		die "Cannot find Century ID column in index file\n" if $jrpidIndex < 0;
 		my @fields = split(/\t+/, $line);
-		my $cenid = $fields[$cenidIndex];
-		next if $cenid =~ /^\s*$/;
-		next if $cenid eq ".";
+		my $jrpid = $fields[$jrpidIndex];
+		next if $jrpid =~ /^\s*$/;
+		next if $jrpid eq ".";
 		my $md5 = $fields[$md5Index];
-		$output{$cenid} = $md5;
+		$output{$jrpid} = $md5;
 	}
 
 	return %output;
