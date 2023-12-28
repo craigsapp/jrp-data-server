@@ -24,6 +24,8 @@
 #       *.mp3     == Conversion of MIDI data to MP3 audio file.
 #       *-prange-attack.svg    == Pitch range plot
 #       *-prange-duration.svg  == Pitch range plot, weighted by durations
+#       *-activity-merged.png  == Activity plot, merged voice counts
+#       *-activity-separate.png== Activity plot, seperate voice counts
 #       *-keyscape-abspre.png  == Keyscape (absolute, preprocessed)
 #       *-keyscape-relpre.png  == Keyscape (relative, preprocessed)
 #       *-keyscape-abspost.png == Keyscape (absolute, postprocessed)
@@ -98,6 +100,8 @@ if ($OPTIONS{"format"} =~ /^\s*$/) {
 splitFormatFromId();
 
 writeLog($logdir, $OPTIONS{"id"}, $OPTIONS{"format"});
+
+$OPTIONS{"id"} =~ s/[^A-Za-z.0-9]//;
 
 # Return requested data:
 if ($OPTIONS{"format"} =~ /thema/i) {
@@ -182,6 +186,14 @@ sub processParameters {
 		sendDataContent("prange-duration-svg", $id, @md5s);
 	} elsif ($format eq "prange-attack.svg") {
 		sendDataContent("prange-attack-svg", $id, @md5s);
+	} elsif ($format eq "activity-merged.png") {
+		sendDataContent("activity-merged-png", $id, @md5s);
+	} elsif ($format eq "activity-separate.png") {
+		sendDataContent("activity-separate-png", $id, @md5s);
+	} elsif ($format eq "activity-merged.gnuplot") {
+		sendDataContent("activity-merged-gnuplot", $id, @md5s);
+	} elsif ($format eq "activity-separate.gnuplot") {
+		sendDataContent("activity-separate-gnuplot", $id, @md5s);
 	} elsif ($format eq "mp3") {
 		sendDataContent("mp3", $id, @md5s);
 	} elsif ($format eq "lyrics") {
@@ -229,6 +241,18 @@ sub sendDataContent {
 		sendSvgContent("prange-duration", $md5s[0]);
 	} elsif ($format =~ /prange-attack/) {
 		sendSvgContent("prange-attack", $md5s[0]);
+	} elsif ($format =~ /activity-merged/) {
+		if ($format =~ /png/) {
+			sendPngContent("activity-merged", $md5s[0]);
+		} elsif ($format =~ /gnuplot/) {
+			sendGnuplotContent("activity-merged", $md5s[0]);
+		}
+	} elsif ($format =~ /activity-separate/) {
+		if ($format =~ /png/) {
+			sendPngContent("activity-separate", $md5s[0]);
+		} elsif ($format =~ /gnuplot/) {
+			sendGnuplotContent("activity-separate", $md5s[0]);
+		}
 	} elsif ($format eq "mid") {
 		sendMidiContent($md5s[0]);
 	} elsif ($format eq "mp3") {
@@ -387,7 +411,7 @@ sub sendSvgContent {
 	my $filename = "$cachedir/$cdir/$md5";
 	if ($format eq "prange-duration") {
 		$filename .= "-prange-duration.svg.gz";
-	} elsif ($format eq "attack-svg") {
+	} elsif ($format eq "prange-attack") {
 		$filename .= "-prange-attack.svg.gz";
 	} else {
 		errorMessage("sendSvgContent: Unknown format $format\n");
@@ -578,6 +602,48 @@ sub sendKeyscapeInfoContent {
 
 	my $data = `zcat "$cachedir/$cdir/$md5-keyscape-info.json.gz"`;
 	print "Content-Type: $mime$newline";
+	print "$newline";
+	print $data;
+	exit(0);
+}
+
+
+
+##############################
+##
+## sendPngContent -- (Static content) Send PNG image.
+##
+
+sub sendPngContent {
+	my ($tag, $md5) = @_;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $format = "png";
+	my $mime = "image/png";
+
+	my $data = `cat "$cachedir/$cdir/$md5-$tag.png"`;
+	print "Content-Type: $mime$newline";
+	print "Content-Disposition: attachment; filename=\"data.png\"$newline";
+	print "$newline";
+	print $data;
+	exit(0);
+}
+
+
+
+##############################
+##
+## sendGnuplotContent -- (Static content) Send PNG image.
+##
+
+sub sendGnuplotContent {
+	my ($tag, $md5) = @_;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $format = "png";
+	my $mime = "text/plain";
+
+	my $data = `cat "$cachedir/$cdir/$md5-$tag.gnuplot"`;
+	print "Content-Type: $mime$newline";
+	print "Content-Disposition: attachment; filename=\"data.txt\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);

@@ -441,6 +441,25 @@ erase-prange:
 
 ##############################
 ##
+## Activity conversions.
+##
+
+generate-activity:
+	bin/makeDerivatives -v -d activity
+
+regenerate-activity:
+	bin/makeDerivatives -f -d activity
+
+missing-activity:
+	@bin/listMissingDerivatives -d activity -mcf
+
+erase-activity:
+	bin/eraseDerivatives -d activity
+
+
+
+##############################
+##
 ## Incipit conversions.
 ##
 

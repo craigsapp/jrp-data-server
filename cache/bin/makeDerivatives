@@ -25,6 +25,8 @@
 #                     derivatives.  Allowed derivative types:
 #                        incipit  == Create SVG incipit file (using verovio)
 #                        keyscape == Create keyscape plot images (using mkeyscape and convert)
+#                        prange   == Create prange plot images (using prange)
+#                        activity == Create activity plot images (using activity and convert)
 #                        lyrics   == Extract lyrics from score by part.
 #                        mei      == Create MEI file (using verovio)
 #                        midi     == Create MIDI file (using hum2mid)
@@ -37,6 +39,8 @@
 #
 #     derivative-incipit   == Creates musical incipit SVGs.
 #     derivative-keyscape  == Creates keyscape image files.
+#     derivative-prange    == Creates prange image files.
+#     derivative-activity  == Creates activity image files.
 #     derivative-lyrics    == Creates MEI files.
 #     derivative-mei       == Creates MEI files.
 #     derivative-midi      == Creates MIDI files.
@@ -67,7 +71,7 @@ $groups = "0123456789abcdef" if $groups =~ /^\s*$/;
 $groups = reverse($groups) if $reverseQ;
 
 # musicxml removed from the all option [20220813]
-$derivatives = "incipit,keyscape,lyrics,mei,midi,musedata,prange,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives = "incipit,keyscape,lyrics,mei,midi,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
 $derivatives =~ s/^[^0-9a-zA-Z_-]+//;
 $derivatives =~ s/[^0-9a-zA-Z_-]+$//;
 my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);

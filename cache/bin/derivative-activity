@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+#
+# Programmer:    Craig Stuart Sapp <craig.stanford.edu>
+# Creation Date: Wed Dec 27 10:38:33 AM PST 2023
+# Last Modified: Wed Dec 27 10:38:37 AM PST 2023
+# Filename:      cache/bin/derivative-activity
+# Syntax:        perl 5
+# vim:           ts=3
+#
+# Description:   Create activity plots, one for total activity for all voices,
+#                and another for individual voices.  There are two files
+#                generated for each plot (1) a gnuplot file and (2) conversion
+#                to PNG.
+#
+# Options:
+#     -f   == Force recalculation of derivative files (overwrite).
+#
+
+use strict;
+use Getopt::Long;
+
+my $activity = `which activity`;
+chomp $activity;
+die "ERROR: Cannot locate activity command\n" if $activity =~ /^\s*$/;
+
+my $gnuplot = `which gnuplot`;
+chomp $gnuplot;
+die "ERROR: Cannot locate gnuplot command\n" if $gnuplot =~ /^\s*$/;
+
+my $convert = `which convert`;
+chomp $convert;
+die "ERROR: Cannot locate convert command\n" if $gnuplot =~ /^\s*$/;
+
+my $gnuplot = `which gnuplot`;
+chomp $gnuplot;
+die "ERROR: Cannot locate gnuplot command\n" if $gnuplot =~ /^\s*$/;
+
+my $gnufontdir = "../../../setup/gnuplot";
+$gnuplot = "GDFONTPATH=$gnufontdir $gnuplot";
+
+my $forceQ = 0;
+Getopt::Long::Configure("bundling");
+GetOptions (
+   'f|force' => \$forceQ
+);
+
+die "Usage: $0 md5id\n" if @ARGV != 1;
+
+my $md5id = $ARGV[0];
+
+die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
+
+my $inputfile = "$md5id.krn";
+
+die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
+
+if ($forceQ) {
+	unlink("$md5id-activity-merged.gnuplot");
+	unlink("$md5id-activity-merged.png");
+	unlink("$md5id-activity-separate.gnuplot");
+	unlink("$md5id-activity-separate.png");
+}
+
+# If full file pairs are not present, then delete solo file:
+unlink("$md5id-activity-merged.png") if !-r "$md5id-activity-merged.gnuplot";
+unlink("$md5id-activity-merged.gnuplot") if !-r "$md5id-activity-merged.png";
+unlink("$md5id-activity-separate.png") if !-r "$md5id-activity-separate.gnuplot";
+unlink("$md5id-activity-separate.gnuplot") if !-r "$md5id-activity-separate.png";
+
+
+if (!-r "$md5id-activity-merged.gnuplot") {
+	my $outputActivityGnuplot = `cat $md5id.krn | $activity --gnuplot`;
+	if ($outputActivityGnuplot =~ /^\s*$/) {
+		unlink("$md5id-activity-merged.gnuplot");
+		die "$md5id: No data for activity merged gnuplot content.\n";
+	}
+	open (FILE, ">$md5id-activity-merged.gnuplot") or die "ERROR: Cannot write file $md5id-activity-merged.gnuplot\n";
+	print FILE $outputActivityGnuplot;
+	close FILE;
+	print STDERR " Created $md5id-activity-merged.gnuplot.\n";
+}
+
+if (!-r "$md5id-activity-separate.gnuplot") {
+	my $outputActivityGnuplot = `cat $md5id.krn | $activity -s --gnuplot`;
+	if ($outputActivityGnuplot =~ /^\s*$/) {
+		unlink("$md5id-activity-separate.gnuplot");
+		die "$md5id: No data for activity separate gnuplot content.\n";
+	}
+	open (FILE, ">$md5id-activity-separate.gnuplot") or die "ERROR: Cannot write file $md5id-activity-separate.gnuplot\n";
+	print FILE $outputActivityGnuplot;
+	close FILE;
+	print STDERR " Created $md5id-activity-separate.gnuplot.\n";
+}
+
+
+if (!-r "$md5id-activity-merged.png") {
+	`cat $md5id-activity-merged.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-merged.png`;
+	print STDERR " Created $md5id-activity-merged.png.\n";
+}
+
+if (!-r "$md5id-activity-separate.png") {
+	`cat $md5id-activity-separate.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-separate.png`;
+	print STDERR " Created $md5id-activity-separate.png.\n";
+}
+
+
+

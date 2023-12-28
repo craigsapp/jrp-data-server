@@ -67,7 +67,7 @@ unlink("$md5id-prange-duration.pmx.gz") if !-r "$md5id-prange-duration.svg.gz";
 
 
 if (!-r "$md5id-prange-attack.pmx.gz") {
-	my $outputAttackPmx   = `$prange --hover --score $inputfile`;
+	my $outputAttackPmx   = `$prange --jrp $inputfile`;
 	if ($outputAttackPmx =~ /^\s*$/) {
 		die "$md5id: No data for prange attack pmx content.\n";
 	}
@@ -82,7 +82,7 @@ if (!-r "$md5id-prange-attack.pmx.gz") {
 }
 
 if (!-r "$md5id-prange-duration.pmx.gz") {
-	my $outputDurationPmx = `$prange --hover -d --score $inputfile`;
+	my $outputDurationPmx = `$prange --jrp -d $inputfile`;
 	if ($outputDurationPmx =~ /^\s*$/) {
 		die "$md5id: No data for prange duration pmx content.\n";
 	}
