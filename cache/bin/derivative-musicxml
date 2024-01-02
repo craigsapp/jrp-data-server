@@ -81,7 +81,7 @@ open (FILE, ">$outputfile") or die "ERROR: Cannot write file $outputfile\n";
 print FILE $output;
 close FILE;
 
-print STDERR "Compressing $inputfile ...";
+print STDERR "Compressing $outputfile ...";
 `$gzip $outputfile`;
 print STDERR " Done.\n";
 

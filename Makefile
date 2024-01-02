@@ -23,7 +23,7 @@
 # KERNREPOS: This is a list of all of the directories where Humdrum files
 # are located that should be incorporated into this data server for the
 # files.
-KERNREPOS =  ../jrp-scores ../1520s-project-scores/humdrum
+KERNREPOS =  ../jrp-scores ../1520s-project-scores/humdrum ../tasso-scores
 
 # TARGETDIR: The directory into which symbolic links to Humdrum files in the
 # KERNREPOS directory list are located.

@@ -70,8 +70,7 @@ GetOptions (
 $groups = "0123456789abcdef" if $groups =~ /^\s*$/;
 $groups = reverse($groups) if $reverseQ;
 
-# musicxml removed from the all option [20220813]
-$derivatives = "incipit,keyscape,lyrics,mei,midi,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives = "incipit,keyscape,lyrics,mei,midi,musicxml,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
 $derivatives =~ s/^[^0-9a-zA-Z_-]+//;
 $derivatives =~ s/[^0-9a-zA-Z_-]+$//;
 my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);

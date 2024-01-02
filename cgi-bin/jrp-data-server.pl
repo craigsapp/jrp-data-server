@@ -18,23 +18,33 @@
 #    Quasi-score ids:
 #       random    ==  Get random score from cache.
 #    Static cached formats:
-#       *.krn     == Humdrum data file.
-#       *.mei     == Conversion to MEI data.
-#       *.mid     == Conversion to MIDI data.
-#       *.mp3     == Conversion of MIDI data to MP3 audio file.
-#       *-prange-attack.svg    == Pitch range plot
-#       *-prange-duration.svg  == Pitch range plot, weighted by durations
-#       *-activity-merged.png  == Activity plot, merged voice counts
-#       *-activity-separate.png== Activity plot, seperate voice counts
-#       *-keyscape-abspre.png  == Keyscape (absolute, preprocessed)
-#       *-keyscape-relpre.png  == Keyscape (relative, preprocessed)
-#       *-keyscape-abspost.png == Keyscape (absolute, postprocessed)
-#       *-keyscape-relpost.png == Keyscape (relative, postprocessed)
-#       keyscape-info    == Keyscape image timing info
+#
+#       krn == Humdrum data file.
+#          https://data.josqu.in/Jos2721.krn
+#          https://data.josqu.in/Jos2721
+#       mei == Conversion to MEI data.
+#          https://data.josqu.in/Jos2721.mei
+#       mid == Conversion to MIDI data.
+#          https://data.josqu.in/Jos2721.mid
+#       mp3 == Conversion of MIDI data to MP3 audio file.
+#          https://data.josqu.in/Jos2721.mp3
 #       musicxml  == Conversion to MusicXML data.
 #          https://data.josqu.in/Jos2721.musicxml
-#       incipit   == Conversion to SVG musical incipit.
-#          https://data.josqu.in/Jos2721.incipit
+#       incipit  == Conversion to SVG musical incipit.
+#          https://data.josqu.in/Jos2721-incipit.svg
+#       prange ==  Pitch range plots
+#    	  		-prange-attack.svg    == Pitch range plot
+#       		-prange-duration.svg  == Pitch range plot, weighted by durations
+#       activity == Activity plots
+#           -activity-merged.png  == Activity plot, merged voice counts
+#           -activity-separate.png== Activity plot, seperate voice counts
+#       keyscape == Keyscape plots.
+#           -keyscape-abspre.png  == Keyscape (absolute, preprocessed)
+#           -keyscape-relpre.png  == Keyscape (relative, preprocessed)
+#           -keyscape-abspost.png == Keyscape (absolute, postprocessed)
+#           -keyscape-relpost.png == Keyscape (relative, postprocessed)
+#           -keyscape-info    == Keyscape image timing info
+#
 #    Dynamically generated formats:
 #       lyrics    == Extract lyrics HTML page
 #          https://data.josqu.in/Jos2721.lyrics
