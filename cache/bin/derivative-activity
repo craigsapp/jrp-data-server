@@ -2,7 +2,7 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Wed Dec 27 10:38:33 AM PST 2023
-# Last Modified: Wed Dec 27 10:38:37 AM PST 2023
+# Last Modified: Sun Jan 21 09:21:00 PM PST 2024
 # Filename:      cache/bin/derivative-activity
 # Syntax:        perl 5
 # vim:           ts=3
@@ -59,6 +59,10 @@ if ($forceQ) {
 	unlink("$md5id-activity-merged.png");
 	unlink("$md5id-activity-separate.gnuplot");
 	unlink("$md5id-activity-separate.png");
+	unlink("$md5id-activity-merged-notitle.gnuplot");
+	unlink("$md5id-activity-merged-notitle.png");
+	unlink("$md5id-activity-separate-notitle.gnuplot");
+	unlink("$md5id-activity-separate-notitle.png");
 }
 
 # If full file pairs are not present, then delete solo file:
@@ -66,6 +70,10 @@ unlink("$md5id-activity-merged.png") if !-r "$md5id-activity-merged.gnuplot";
 unlink("$md5id-activity-merged.gnuplot") if !-r "$md5id-activity-merged.png";
 unlink("$md5id-activity-separate.png") if !-r "$md5id-activity-separate.gnuplot";
 unlink("$md5id-activity-separate.gnuplot") if !-r "$md5id-activity-separate.png";
+unlink("$md5id-activity-merged-notitle.png") if !-r "$md5id-activity-merged-notitle.gnuplot";
+unlink("$md5id-activity-merged-notitle.gnuplot") if !-r "$md5id-activity-merged-notitle.png";
+unlink("$md5id-activity-separate-notitle.png") if !-r "$md5id-activity-separate-notitle.gnuplot";
+unlink("$md5id-activity-separate-notitle.gnuplot") if !-r "$md5id-activity-separate-notitle.png";
 
 
 if (!-r "$md5id-activity-merged.gnuplot") {
@@ -92,6 +100,30 @@ if (!-r "$md5id-activity-separate.gnuplot") {
 	print STDERR " Created $md5id-activity-separate.gnuplot.\n";
 }
 
+if (!-r "$md5id-activity-merged-notitle.gnuplot") {
+	my $outputActivityGnuplot = `cat $md5id.krn | $activity --gnuplot -t ""`;
+	if ($outputActivityGnuplot =~ /^\s*$/) {
+		unlink("$md5id-activity-merged-notitle.gnuplot");
+		die "$md5id: No data for activity merged notitle gnuplot content.\n";
+	}
+	open (FILE, ">$md5id-activity-merged-notitle.gnuplot") or die "ERROR: Cannot write file $md5id-activity-merged-notitle.gnuplot\n";
+	print FILE $outputActivityGnuplot;
+	close FILE;
+	print STDERR " Created $md5id-activity-merged-notitle.gnuplot.\n";
+}
+
+if (!-r "$md5id-activity-separate-notitle.gnuplot") {
+	my $outputActivityGnuplot = `cat $md5id.krn | $activity -s --gnuplot -t ""`;
+	if ($outputActivityGnuplot =~ /^\s*$/) {
+		unlink("$md5id-activity-separate-notitle.gnuplot");
+		die "$md5id: No data for activity separate notitle gnuplot content.\n";
+	}
+	open (FILE, ">$md5id-activity-separate-notitle.gnuplot") or die "ERROR: Cannot write file $md5id-activity-separate-notitle.gnuplot\n";
+	print FILE $outputActivityGnuplot;
+	close FILE;
+	print STDERR " Created $md5id-activity-separate-notitle.gnuplot.\n";
+}
+
 
 if (!-r "$md5id-activity-merged.png") {
 	`cat $md5id-activity-merged.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-merged.png`;
@@ -101,6 +133,16 @@ if (!-r "$md5id-activity-merged.png") {
 if (!-r "$md5id-activity-separate.png") {
 	`cat $md5id-activity-separate.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-separate.png`;
 	print STDERR " Created $md5id-activity-separate.png.\n";
+}
+
+if (!-r "$md5id-activity-merged-notitle.png") {
+	`cat $md5id-activity-merged-notitle.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-merged-notitle.png`;
+	print STDERR " Created $md5id-activity-merged-notitle.png.\n";
+}
+
+if (!-r "$md5id-activity-separate-notitle.png") {
+	`cat $md5id-activity-separate-notitle.gnuplot | $gnuplot | $convert - -resize 1200x375 png:- > $md5id-activity-separate-notitle.png`;
+	print STDERR " Created $md5id-activity-separate-notitle.png.\n";
 }
 
 
