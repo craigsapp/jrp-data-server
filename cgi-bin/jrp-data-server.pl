@@ -40,6 +40,12 @@
 #       activity == Activity plots
 #           -activity-merged.png  == Activity plot, merged voice counts
 #           -activity-separate.png== Activity plot, seperate voice counts
+#           -activity-merged-notitle.png  == Activity plot, merged voice counts, without title
+#           -activity-separate-notitle.png== Activity plot, seperate voice counts, without title
+#           -activity-merged.gnuplot  == Activity plot, merged voice counts (source gnuplot)
+#           -activity-separate.gnuplot== Activity plot, seperate voice counts (source gnuplot)
+#           -activity-merged-notitle.gnuplot  == Activity plot, merged voice counts, without title (source gnuplot)
+#           -activity-separate-notitle.gnuplot== Activity plot, seperate voice counts, without title (source gnuplot)
 #       keyscape == Keyscape plots.
 #           -keyscape-abspre.png  == Keyscape (absolute, preprocessed)
 #           -keyscape-relpre.png  == Keyscape (relative, preprocessed)
@@ -178,7 +184,7 @@ sub processParameters {
 		sendDataContent($format, $id, @md5s);
 	} elsif ($format eq "musicxml") {
 		sendDataContent($format, $id, @md5s);
-	} elsif ($format eq "incipit") {
+	} elsif ($format eq "incipit.svg") {
 		sendDataContent($format, $id, @md5s);
 	} elsif ($format eq "keyscape-abspre.png") {
 		sendDataContent("keyscape-abspre-png", $id, @md5s);
@@ -210,6 +216,14 @@ sub processParameters {
 		sendDataContent("activity-merged-gnuplot", $id, @md5s);
 	} elsif ($format eq "activity-separate.gnuplot") {
 		sendDataContent("activity-separate-gnuplot", $id, @md5s);
+	} elsif ($format eq "activity-merged-notitle.png") {
+		sendDataContent("activity-merged-notitle-png", $id, @md5s);
+	} elsif ($format eq "activity-separate-notitle.png") {
+		sendDataContent("activity-separate-notitle-png", $id, @md5s);
+	} elsif ($format eq "activity-merged-notitle.gnuplot") {
+		sendDataContent("activity-merged-notitle-gnuplot", $id, @md5s);
+	} elsif ($format eq "activity-separate-notitle.gnuplot") {
+		sendDataContent("activity-separate-notitle-gnuplot", $id, @md5s);
 	} elsif ($format eq "mp3") {
 		sendDataContent("mp3", $id, @md5s);
 	} elsif ($format eq "lyrics") {
@@ -247,7 +261,7 @@ sub sendDataContent {
 		sendMeiContent($md5s[0]);
 	} elsif ($format eq "musicxml") {
 		sendMusicxmlContent($md5s[0]);
-	} elsif ($format eq "incipit") {
+	} elsif ($format =~ /incipit(\.svg)?/) {
 		sendMusicalIncipitContent($md5s[0]);
 	} elsif ($format =~ /^keyscape-info/) {
 		sendKeyscapeInfoContent($md5s[0]);
@@ -261,6 +275,20 @@ sub sendDataContent {
 		sendPmxContent("prange-duration", $md5s[0]);
 	} elsif ($format =~ /prange-attack-pmx/) {
 		sendPmxContent("prange-attack", $md5s[0]);
+
+	} elsif ($format =~ /activity-merged-notitle/) {
+		if ($format =~ /png/) {
+			sendPngContent("activity-merged-notitle", $md5s[0]);
+		} elsif ($format =~ /gnuplot/) {
+			sendGnuplotContent("activity-merged-notitle", $md5s[0]);
+		}
+	} elsif ($format =~ /activity-separate-notitle/) {
+		if ($format =~ /png/) {
+			sendPngContent("activity-separate-notitle", $md5s[0]);
+		} elsif ($format =~ /gnuplot/) {
+			sendGnuplotContent("activity-separate-notitle", $md5s[0]);
+		}
+
 	} elsif ($format =~ /activity-merged/) {
 		if ($format =~ /png/) {
 			sendPngContent("activity-merged", $md5s[0]);
@@ -273,6 +301,7 @@ sub sendDataContent {
 		} elsif ($format =~ /gnuplot/) {
 			sendGnuplotContent("activity-separate", $md5s[0]);
 		}
+
 	} elsif ($format eq "mid") {
 		sendMidiContent($md5s[0]);
 	} elsif ($format eq "mp3") {
