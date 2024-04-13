@@ -368,6 +368,9 @@ erase-musicxml:
 ## MIDI conversions.
 ##
 
+gmid: generate-midi
+midg: generate-midi
+midi-generate: generate-midi
 generate-midi:
 	bin/makeDerivatives -v -d midi
 
@@ -387,6 +390,9 @@ erase-midi:
 ## MP# conversions.
 ##
 
+mp3g: generate-mp3
+gmp3: generate-mp3
+mp3-generate: generate-mp3
 generate-mp3:
 	bin/makeDerivatives -v -d mp3
 

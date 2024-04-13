@@ -27,23 +27,23 @@ use Getopt::Long;
 my $depth = 1;
 
 my $derivatives;
-my $centuryQ = 0;  # -c :: List century ID of missing derivative file.
+my $jrpidQ = 0;  # -c :: List jrpid ID of missing derivative file.
 my $fileQ    = 0;  # -f :: List Humdrum filename of missing derivative file.
 my $jrpidQ  = 0;  # -i :: List file ID of missing derivative file.
 my $md5Q     = 0;  # -m :: List MD5 ID of missing derivativer file.
 Getopt::Long::Configure("bundling");
 GetOptions (
    'd|derivative|derivatives=s' => \$derivatives,
-   'c|century' => \$centuryQ,
+   'c|jrpid' => \$jrpidQ,
    'f|file'    => \$fileQ,
    'i|jrpid'  => \$jrpidQ,
    'm|md5'     => \$md5Q
 );
 
 # Default missing file reporting style:
-if ((!$centuryQ) && (!$jrpidQ) && (!$fileQ) && (!$md5Q)) {
+if ((!$jrpidQ) && (!$jrpidQ) && (!$fileQ) && (!$md5Q)) {
 	$md5Q     = 1;
-	$centuryQ = 1;
+	$jrpidQ = 1;
 	$jrpidQ  = 1;
 }
 
@@ -415,7 +415,7 @@ sub getIndex {
 	close FILE;
 	my $md5Index    = -1;
 	my $jrpidIndex = -1;
-	my $centuryIndex = -1;
+	my $jrpidIndex = -1;
 	my $exinterp = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
@@ -426,7 +426,6 @@ sub getIndex {
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index = $j if $fields[$j] eq "**md5";
-				$centuryIndex = $j if $fields[$j] eq "**cenid";
 				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
@@ -440,8 +439,8 @@ sub getIndex {
 		if ($md5Q && $md5Index >= 0) {
 			$value .= $fields[$md5Index] . "\t";
 		}
-		if ($centuryQ && $centuryIndex >= 0) {
-			$value .= $fields[$centuryIndex] . "\t";
+		if ($jrpidQ && $jrpidIndex >= 0) {
+			$value .= $fields[$jrpidIndex] . "\t";
 		}
 		if ($jrpidQ && $jrpidIndex >= 0) {
 			$value .= $fields[$jrpidIndex] . "\t";

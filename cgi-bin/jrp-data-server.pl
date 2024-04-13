@@ -152,8 +152,10 @@ exit(0);
 ##     https://data.josqu.in/16xx:1210.mei for MEI file
 ##
 
+my $ID = "";
 sub processParameters {
 	my ($id, $format) = @_;
+	$ID = $id;
 
 	errorMessage("ID is empty.") if $id =~ /^\s*$/;
 	errorMessage("Strange invalid ID \"$id\".") if $id =~ /^[._-]+$/;
@@ -784,7 +786,7 @@ sub sendMp3Content {
 
 	my $data = `cat "$cachedir/$cdir/$md5.$format"`;
 	print "Content-Type: $mime$newline";
-	print "Content-Disposition: attachment; filename=\"data.mp3\"$newline";
+	print "Content-Disposition: attachment; filename=\"$ID.mp3\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);

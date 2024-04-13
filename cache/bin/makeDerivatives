@@ -30,6 +30,7 @@
 #                        lyrics   == Extract lyrics from score by part.
 #                        mei      == Create MEI file (using verovio)
 #                        midi     == Create MIDI file (using hum2mid)
+#                        mp3      == Create MP3 files
 #                        musedata == Create Musedata file (using humextra's hum2muse)
 #                        musicxml == Create MusicXML file (using converter21)
 #                        thema    == Create Thema search indexes (uses tindex)
@@ -44,6 +45,7 @@
 #     derivative-lyrics    == Creates MEI files.
 #     derivative-mei       == Creates MEI files.
 #     derivative-midi      == Creates MIDI files.
+#     derivative-mp3       == Creates MP3 files.
 #     derivative-musicxml  == Creates MusicXML files.
 #     derivative-thema     == Creates Thema music search index file(s).
 #     derivative-wordlist  == Creates a list of words from lyrcs in the input score.
@@ -70,7 +72,7 @@ GetOptions (
 $groups = "0123456789abcdef" if $groups =~ /^\s*$/;
 $groups = reverse($groups) if $reverseQ;
 
-$derivatives = "incipit,keyscape,lyrics,mei,midi,musicxml,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives = "incipit,keyscape,lyrics,mei,midi,mp3,musicxml,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
 $derivatives =~ s/^[^0-9a-zA-Z_-]+//;
 $derivatives =~ s/[^0-9a-zA-Z_-]+$//;
 my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);

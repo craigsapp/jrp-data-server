@@ -72,9 +72,9 @@ my %OPTIONS;
 $OPTIONS{'t_t'} = 70;     $OPTIONS{'v_t'} = 73;  # Tenor
 $OPTIONS{'t_c'} = 70;     $OPTIONS{'v_c'} = 70;  # Contra
 $OPTIONS{'t_b'} = 68;     $OPTIONS{'v_b'} = 70;  # Bassus
-$OPTIONS{'t_a'} = 71;     $OPTIONS{'v_a'} = 55;  # Altus
+$OPTIONS{'t_a'} = 71;     $OPTIONS{'v_a'} = 40;  # Altus
 $OPTIONS{'t_s'} = 74;     $OPTIONS{'v_s'} = 80;  # Superius
-$OPTIONS{'t_d'} = 75;     $OPTIONS{'v_d'} = 80;  # Discantus
+$OPTIONS{'t_d'} = 75;     $OPTIONS{'v_d'} = 90;  # Discantus
 
 my $timbres  = "--timbres \'";
 $timbres .= "Tenor:i$OPTIONS{'t_t'},v$OPTIONS{'v_t'}";
