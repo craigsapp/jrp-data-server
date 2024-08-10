@@ -189,48 +189,48 @@ erase-cache:
 ##     is related to which index file is read for preparing the indexes.
 ##
 
-indexes-new: indexes-new-popc2 siglum-index instrument-index-new
-indexes: indexes-popc2 siglum-index instrument-index
+indexes-new: indexes-new-jrp siglum-index instrument-index-new
+indexes: indexes-jrp siglum-index instrument-index
 
-indexes-new-popc2: popc2-score-index-new popc2-lyrics-index-new popc2-composer-index popc2-pitch-index instrument-index-new
-indexes-popc2: popc2-score-index popc2-lyrics-index popc2-composer-index popc2-pitch-index instrument-index
+indexes-new-jrp: jrp-score-index-new jrp-lyrics-index-new jrp-composer-index jrp-pitch-index instrument-index-new
+indexes-jrp: jrp-score-index jrp-lyrics-index jrp-composer-index jrp-pitch-index instrument-index
 
 
-popc2-score-index-new:
+jrp-score-index-new:
 	@mkdir -p indexes
-	-rm -f indexes/popc2-score-index.aton.gz
-	-rm -f indexes/popc2-score-index.json.gz
-	bin/makePopc2ScoreIndex -i cache-index-new.hmd > indexes/popc2-score-index.aton
-	(cd indexes; aton2json popc2-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > popc2-score-index.json)
-	(cd indexes; gzip popc2-score-index.json)
-	(cd indexes; gzip popc2-score-index.aton)
+	-rm -f indexes/jrp-score-index.aton.gz
+	-rm -f indexes/jrp-score-index.json.gz
+	bin/makeJrpScoreIndex -i cache-index-new.hmd > indexes/jrp-score-index.aton
+	(cd indexes; aton2json jrp-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > jrp-score-index.json)
+	(cd indexes; gzip jrp-score-index.json)
+	(cd indexes; gzip jrp-score-index.aton)
 
-popc2-score-index:
+jrp-score-index:
 	@mkdir -p indexes
-	-rm -f indexes/popc2-score-index.aton.gz
-	-rm -f indexes/popc2-score-index.json.gz
-	bin/makePopc2ScoreIndex -i cache-index.hmd > indexes/popc2-score-index.aton
-	(cd indexes; aton2json popc2-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > popc2-score-index.json)
-	(cd indexes; gzip popc2-score-index.json)
-	(cd indexes; gzip popc2-score-index.aton)
+	-rm -f indexes/jrp-score-index.aton.gz
+	-rm -f indexes/jrp-score-index.json.gz
+	bin/makeJrpScoreIndex -i cache-index.hmd > indexes/jrp-score-index.aton
+	(cd indexes; aton2json jrp-score-index.aton | sed 's/^{"ENTRY"://; s/}[]]}$$/}]/' > jrp-score-index.json)
+	(cd indexes; gzip jrp-score-index.json)
+	(cd indexes; gzip jrp-score-index.aton)
 
 
-lyrics-index-new: popc2-lyrics-index-new
-lyrics-index: popc2-lyrics-index
+lyrics-index-new: jrp-lyrics-index-new
+lyrics-index: jrp-lyrics-index
 
 
-popc2-lyrics-index-new:
+jrp-lyrics-index-new:
 	@mkdir -p indexes
-	-rm -f indexes/popc2-lyrics-index.txt.gz
-	bin/makePopc2LyricsIndex -i cache-index-new.hmd > indexes/popc2-lyrics-index.txt
-	(cd indexes; gzip popc2-lyrics-index.txt)
+	-rm -f indexes/jrp-lyrics-index.txt.gz
+	bin/makeJrpLyricsIndex -i cache-index-new.hmd > indexes/jrp-lyrics-index.txt
+	(cd indexes; gzip jrp-lyrics-index.txt)
 
 
-popc2-lyrics-index:
+jrp-lyrics-index:
 	@mkdir -p indexes
-	-rm -f indexes/popc2-lyrics-index.txt.gz
-	bin/makePopc2LyricsIndex -i cache-index.hmd > indexes/popc2-lyrics-index.txt
-	(cd indexes; gzip popc2-lyrics-index.txt)
+	-rm -f indexes/jrp-lyrics-index.txt.gz
+	bin/makeJrpLyricsIndex -i cache-index.hmd > indexes/jrp-lyrics-index.txt
+	(cd indexes; gzip jrp-lyrics-index.txt)
 
 
 instrument-index-new:
@@ -246,16 +246,16 @@ instrument-index:
 	(cd indexes; gzip instrument-index.json)
 
 
-composer-index: popc2-composer-index
+composer-index: jrp-composer-index
 
 
-popc2-composer-index:
-	-rm -f indexes/popc2-composer-index.aton.gz
-	-rm -f indexes/popc2-composer-index.json.gz
-	wget "https://script.google.com/macros/s/AKfycby5J8xq1V8bNpA567Kw3yiQ5EcfS3EvMDRZTrogBxfrL5Q93fSJhACZ42FuhuRoESkZSQ/exec?format=json" -O indexes/popc2-composer-index.json
-	wget "https://script.google.com/macros/s/AKfycby5J8xq1V8bNpA567Kw3yiQ5EcfS3EvMDRZTrogBxfrL5Q93fSJhACZ42FuhuRoESkZSQ/exec?format=aton" -O indexes/popc2-composer-index.aton
-	(cd indexes; gzip popc2-composer-index.aton)
-	(cd indexes; gzip popc2-composer-index.json)
+jrp-composer-index:
+	-rm -f indexes/jrp-composer-index.aton.gz
+	-rm -f indexes/jrp-composer-index.json.gz
+	wget "https://script.google.com/macros/s/AKfycby5J8xq1V8bNpA567Kw3yiQ5EcfS3EvMDRZTrogBxfrL5Q93fSJhACZ42FuhuRoESkZSQ/exec?format=json" -O indexes/jrp-composer-index.json
+	wget "https://script.google.com/macros/s/AKfycby5J8xq1V8bNpA567Kw3yiQ5EcfS3EvMDRZTrogBxfrL5Q93fSJhACZ42FuhuRoESkZSQ/exec?format=aton" -O indexes/jrp-composer-index.aton
+	(cd indexes; gzip jrp-composer-index.aton)
+	(cd indexes; gzip jrp-composer-index.json)
 
 
 siglum-index:
@@ -380,6 +380,7 @@ regenerate-midi:
 missing-midi:
 	@bin/listMissingDerivatives -d midi -mcf
 
+delete-midi: erase-midi
 erase-midi:
 	bin/eraseDerivatives -d midi
 
@@ -402,8 +403,31 @@ regenerate-mp3:
 missing-mp3:
 	@bin/listMissingDerivatives -d mp3 -mcf
 
+delete-mp3: erase-mp3
 erase-mp3:
 	bin/eraseDerivatives -d mp3
+
+
+
+##############################
+##
+## timemap conversions.
+##
+
+: generate-timemap
+gtimemap: generate-timemap
+timemap-generate: generate-timemap
+generate-timemap:
+	bin/makeDerivatives -v -d timemap
+
+regenerate-timemap:
+	bin/makeDerivatives -f -d timemap
+
+missing-timemap:
+	@bin/listMissingDerivatives -d timemap -mcf
+
+erase-timemap:
+	bin/eraseDerivatives -d timemap
 
 
 
@@ -499,7 +523,7 @@ missing-thema:
 
 erase-thema:
 	bin/eraseDerivatives -d thema
-	rm -f indexes/popc2-pitch-index.txt.gz
+	rm -f indexes/jrp-pitch-index.txt.gz
 
 
 
@@ -546,18 +570,18 @@ erase-lyrics:
 # work thema files are created).
 #
 
-cache-thema: popc2-pitch-index
-thema-cache: popc2-pitch-index
-ct: popc2-pitch-index
-tc: popc2-pitch-index
+cache-thema: jrp-pitch-index
+thema-cache: jrp-pitch-index
+ct: jrp-pitch-index
+tc: jrp-pitch-index
 
-popc2-thema-pitch-index: popc2-pitch-index
-popc2-cache-thema: popc2-pitch-index
-popc2-thema-cache: popc2-pitch-index
-popc2-pitch-index:
-	-rm -f indexes/popc2-pitch-index.txt.gz
-	bin/makePopc2PitchIndex > indexes/popc2-pitch-index.txt
-	gzip indexes/popc2-pitch-index.txt
+jrp-thema-pitch-index: jrp-pitch-index
+jrp-cache-thema: jrp-pitch-index
+jrp-thema-cache: jrp-pitch-index
+jrp-pitch-index:
+	-rm -f indexes/jrp-pitch-index.txt.gz
+	bin/makeJrpPitchIndex > indexes/jrp-pitch-index.txt
+	gzip indexes/jrp-pitch-index.txt
 
 
 ###########################################################################

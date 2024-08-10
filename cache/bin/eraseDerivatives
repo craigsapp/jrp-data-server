@@ -18,6 +18,7 @@
 #                         keyscape == keyscape plot images.
 #                         incipit  == Incipit SVG files
 #                         thema    == Thema search indexes
+#                         timemap  == MIDI timemap files.
 #                         wordlist == Lyrics word lists.
 #
 
@@ -115,6 +116,8 @@ sub eraseDerivativesForEntry {
 			$command = "(cd $basedir/$md5 && rm -f $md5.mid)";
 		} elsif ($derivative eq "thema") {
 			$command = "(cd $basedir/$md5 && rm -f $md5*.thema)";
+		} elsif ($derivative eq "timemap") {
+			$command = "(cd $basedir/$md5 && rm -f $md5-timemap.json)";
 		} elsif ($derivative eq "wordlist") {
 			$command = "(cd $basedir/$md5 && rm -f $md5-wordlist.txt)";
 		}

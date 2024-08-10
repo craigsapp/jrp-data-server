@@ -21,19 +21,24 @@ use Getopt::Long;
 
 my $activity = `which activity`;
 chomp $activity;
+if (($activity =~ /^\s*$/) and (-r "/usr/local/bin/activity")) {
+	$activity = "/usr/local/bin/activity";
+}
 die "ERROR: Cannot locate activity command\n" if $activity =~ /^\s*$/;
 
 my $gnuplot = `which gnuplot`;
 chomp $gnuplot;
+if (($gnuplot =~ /^\s*$/) and (-r "/usr/bin/gnuplot")) {
+	$gnuplot = "/usr/bin/gnuplot";
+}
 die "ERROR: Cannot locate gnuplot command\n" if $gnuplot =~ /^\s*$/;
 
 my $convert = `which convert`;
 chomp $convert;
-die "ERROR: Cannot locate convert command\n" if $gnuplot =~ /^\s*$/;
-
-my $gnuplot = `which gnuplot`;
-chomp $gnuplot;
-die "ERROR: Cannot locate gnuplot command\n" if $gnuplot =~ /^\s*$/;
+if (($convert =~ /^\s*$/) and (-r "/usr/bin/convert")) {
+	$convert = "/usr/bin/convert";
+}
+die "ERROR: Cannot locate convert command\n" if $convert =~ /^\s*$/;
 
 my $gnufontdir = "../../../setup/gnuplot";
 $gnuplot = "GDFONTPATH=$gnufontdir $gnuplot";

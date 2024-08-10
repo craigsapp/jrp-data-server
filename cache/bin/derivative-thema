@@ -18,10 +18,16 @@ use Getopt::Long;
 
 my $tindex = `which tindex`;
 chomp $tindex;
+if (($tindex =~ /^\s*$/) and (-r "/usr/local/bin/tindex")) {
+	$tindex = "/usr/local/bin/tindex";
+}
 die "Error: Cannot locate tindex command\n" if $tindex =~ /^\s*$/;
 
 my $chord = `which chord`;
 chomp $chord;
+if (($chord =~ /^\s*$/) and (-r "/usr/local/bin/chord")) {
+	$chord = "/usr/local/bin/chord";
+}
 die "Error: Can not find chord tool.  Install humlib?" if $chord =~ /^\s*$/;
 
 

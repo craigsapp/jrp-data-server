@@ -3,7 +3,7 @@
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Mon 04 Oct 2021 08:55:47 PM PDT
 # Last Modified: Wed 24 Nov 2021 04:02:27 PM PST
-# Filename:      cache/bin/makePopc2LyricsIndex
+# Filename:      cache/bin/makeJrpLyricsIndex
 # Syntax:        perl 5
 # vim:           ts=3
 #
@@ -47,7 +47,7 @@ exit(0);
 ##
 
 sub prepareEntry {
-	my ($cenid, $md5) = @_;
+	my ($jrpid, $md5) = @_;
 	my $sourcedir = getSourceDir($md5, $cacheDepth);
 
 	my $wordlistfile = "$sourcedir/$md5-wordlist.txt";
@@ -57,7 +57,7 @@ sub prepareEntry {
 	my $line = $contents[0];
 	chomp $line;
 	return "" if $line =~ /^\s*$/;
-	return "$cenid\t$line\n";
+	return "$jrpid\t$line\n";
 }
 
 
@@ -93,7 +93,7 @@ sub getIndexCentId {
 	chomp @contents;
 	close FILE;
 	my $md5Index   = -1;
-	my $cenidIndex = -1;
+	my $jrpidIndex = -1;
 	my $exinterp   = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
@@ -104,19 +104,19 @@ sub getIndexCentId {
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
 				$md5Index    = $j if $fields[$j] eq "**md5";
-				$cenidIndex  = $j if $fields[$j] eq "**cenid";
+				$jrpidIndex  = $j if $fields[$j] eq "**jrpid";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
 		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find FileId column in index file\n" if $cenidIndex < 0;
+		die "Cannot find FileId column in index file\n" if $jrpidIndex < 0;
 		my @fields = split(/\t+/, $line);
-		my $cenid = $fields[$cenidIndex];
-		next if $cenid eq ".";
+		my $jrpid = $fields[$jrpidIndex];
+		next if $jrpid eq ".";
 		my $md5 = $fields[$md5Index];
-		$output{$cenid} = $md5;
+		$output{$jrpid} = $md5;
 	}
 	return %output;
 }

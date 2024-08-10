@@ -2,7 +2,7 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Sun Sep 12 08:06:52 PDT 2021
-# Last Modified: Fri 17 Sep 2021 01:10:02 AM PDT
+# Last Modified: Thu Jun 13 11:01:20 AM PDT 2024
 # Filename:      cache/bin/copyKernToCache
 # Syntax:        perl 5
 # vim:           ts=3
@@ -22,6 +22,9 @@ use Getopt::Long;
 use File::Path qw(make_path);
 use File::Copy;
 
+chomp(my $md5sum = `which md5sum`);
+die "Cannot find md5sum program\n" if $md5sum =~ /^\s*$/;
+
 my $indexfile;
 my $kerndir;
 Getopt::Long::Configure("bundling");
@@ -33,6 +36,8 @@ GetOptions (
 $indexfile = "cache-index.hmd" if $indexfile =~ /^\s*$/;
 $kerndir   = "../kern"   if $kerndir   =~ /^\s*$/;
 
+die "Cannot find kern source directory \"$kerndir\"." if !-d $kerndir;
+
 # Cache depth (number of subdirectory levels until file directories).
 my $cacheDepth = 1;
 $cacheDepth = 1 if $cacheDepth < 1;
@@ -43,12 +48,52 @@ my %index = getIndex($indexfile);
 my @keys = sort keys %index;
 
 foreach my $key (@keys) {
-	copyFileToCache($key, $index{$key});
+	my $id = $index{$key};
+	if ($id =~ /\t/) {
+		my @ids = split(/\t+/, $id);
+		for (my $i=0; $i<@ids; $i++) {
+			copyFileToCache($key, $ids[$i]);
+		}
+	} else {
+print "$key\t$id\n";
+		copyFileToCache($key, $id);
+	}
 }
 
 exit(0);
 
 ###########################################################################
+
+##############################
+##
+## getSourceFile -- given an md5 and categorized id, get the
+##     filename for the given categorization.
+##
+
+sub getSourceFile {
+	my ($md5, $id) = @_;
+	my $baseid = $id;
+	$baseid =~ s/.*://;
+	my @srcfiles = glob("$kerndir/$baseid-*.krn");
+
+	my %md5s;
+	for (my $i=0; $i<@srcfiles; $i++) {
+		chomp (my $md = `$md5sum "$srcfiles[$i]"`);
+		$md =~ s/\s.*//;
+		if ($md =~ /^(.{8})/) {
+			$md = $1;
+		}
+		$md5s{$md} = $srcfiles[$i];
+	}
+
+	my $source = $md5s{$md5};
+	if ($source =~ /^\s*$/) {
+		die "Cannot find source file for $md5\n";
+	} else {
+		return $source;
+	}
+}
+
 
 
 ##############################
@@ -57,7 +102,7 @@ exit(0);
 ##
 
 sub copyFileToCache {
-	my ($md5, $jrpid) = @_;
+	my ($md5, $id) = @_;
 	my $targetdir = getTargetDir($md5, $cacheDepth);
 
 	# File is already in cache:
@@ -65,34 +110,12 @@ sub copyFileToCache {
 
 	die "ERROR: Target directory $targetdir is not a directory\n" if -r $targetdir;
 
-	my @srcfiles = glob("$kerndir/$jrpid-*.krn");
-	my $srcfile;
-	if (@srcfiles == 1) {
-		$srcfile = @srcfiles[0];
-	} elsif (@srcfiles > 1) {
-		$srcfile = @srcfiles[0];
-		print STDERR "Duplicate IDs for files: ", join(" ", @srcfiles), "\n";
-	} elsif (@srcfiles == 0) {
-		die "ERROR: Cannot find file for $jrpid\n";
-	} else {
-		for (my $i=0; $i<@srcfiles; $i++) {
-			# POPC-2 filename:
-			if ($srcfiles[$i] =~ /\/${jrpid}_.*\.krn$/) {
-				$srcfile = $srcfiles[$i];
-				last;
-			}
-			if ($srcfiles[$i] =~ /\/${jrpid}.krn$/) {
-				$srcfile = $srcfiles[$i];
-				last;
-			}
-		}
-	}
-	if ($srcfile =~ /^\s*$/) {
-		die "ERRORB: Cannot find file for $jrpid\n";
-	}
+	my $srcfile = getSourceFile($md5, $id);
 
 	# Create target directory
 	make_path($targetdir) or die "ERROR: Cannot create directory $targetdir\n";
+	# create directory if it does not already exist:
+	#`mkdir -p $targetdir`;
 
 	print "Copying $srcfile TO $targetdir/$md5.krn\n";
 	copy($srcfile, "$targetdir/$md5.krn");
@@ -132,9 +155,11 @@ sub getIndex {
 	my @contents = <FILE>;
 	chomp @contents;
 	close FILE;
-	my $md5Index    = -1;
+	my $md5Index   = -1;
 	my $jrpidIndex = -1;
-	my $exinterp = 0;
+	my $tassoIndex = -1;
+	my $s1520Index = -1;
+	my $exinterp   = 0;
 	my %output;
 	for (my $i=0; $i<@contents; $i++) {
 		my $line = $contents[$i];
@@ -143,17 +168,37 @@ sub getIndex {
 			$exinterp = 1;
 			my @fields = split(/\t+/, $line);
 			for (my $j=0; $j<@fields; $j++) {
-				$md5Index    = $j if $fields[$j] eq "**md5";
+				$md5Index   = $j if $fields[$j] eq "**md5";
 				$jrpidIndex = $j if $fields[$j] eq "**jrpid";
+				$tassoIndex = $j if $fields[$j] eq "**tasso";
+				$s1520Index = $j if $fields[$j] eq "**1520s";
 			}
 			next;
 		}
 		next if $line =~ /^\*/;
 		next if !$exinterp;
-		die "Cannot find MD5 column in index file\n" if $md5Index < 0;
-		die "Cannot find FileId column in index file\n" if $jrpidIndex < 0;
+		die "Cannot find MD5 id column in index file\n"   if $md5Index   < 0;
+		die "Cannot find jrpid id column in index file\n" if $jrpidIndex < 0;
+		die "Cannot find tasso id column in index file\n" if $tassoIndex < 0;
+		die "Cannot find 1520s id column in index file\n" if $s1520Index < 0;
 		my @fields = split(/\t+/, $line);
-		$output{$fields[$md5Index]} = $fields[$jrpidIndex];
+		if ($fields[$jrpidIndex] ne ".") {
+			$output{$fields[$md5Index]} = "jrp:$fields[$jrpidIndex]";
+		}
+		if ($fields[$tassoIndex] ne ".") {
+			if ($output{$fields[$md5Index]} =~ /^\s*$/) {
+				$output{$fields[$md5Index]} = "tasso:$fields[$tassoIndex]";
+			} else {
+				$output{$fields[$md5Index]} .= "\ttasso:$fields[$tassoIndex]";
+			}
+		}
+		if ($fields[$s1520Index] ne ".") {
+			if ($output{$fields[$md5Index]} =~ /^\s*$/) {
+				$output{$fields[$md5Index]} = "1520s:$fields[$s1520Index]";
+			} else {
+				$output{$fields[$md5Index]} .= "\t1520s$fields[$s1520Index]";
+			}
+		}
 	}
 	return %output;
 }

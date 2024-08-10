@@ -46,10 +46,16 @@ die "ERROR: Cannot locate lyrics command\n" if !-r $lyrics;
 
 my $humtr = `which humtr`;
 chomp $humtr;
+if (($humtr =~ /^\s*$/) and (-r "/usr/local/bin/humtr")) {
+	$humtr = "/usr/local/bin/humtr";
+}
 die "ERROR: Cannot locate humtr command\n" if $humtr =~ /^\s*$/;
 
 my $gzip = `which gzip`;
 chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
 die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 print STDERR "LYRICS $inputfile\n";

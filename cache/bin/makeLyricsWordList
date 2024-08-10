@@ -19,14 +19,23 @@ use IPC::Open3;
 
 my $extractx  = `which extractx`;
 chomp $extractx;
+if (($extractx =~ /^\s*$/) and (-r "/usr/local/bin/extractx")) {
+	$extractx = "/usr/local/bin/extractx";
+}
 die "Cannot find extractx\n" if $extractx =~ /^\s*$/;
 
 my $serialize  = `which serialize`;
 chomp $serialize;
+if (($serialize =~ /^\s*$/) and (-r "/usr/local/bin/serialize")) {
+	$serialize = "/usr/local/bin/serialize";
+}
 die "Cannot find serialize\n" if $serialize =~ /^\s*$/;
 
 my $humcat  = `which humcat`;
 chomp $humcat;
+if (($humcat =~ /^\s*$/) and (-r "/usr/local/bin/humcat")) {
+	$humcat = "/usr/local/bin/humcat";
+}
 die "Cannot find humcat\n" if $humcat =~ /^\s*$/;
 
 

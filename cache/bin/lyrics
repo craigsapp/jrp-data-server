@@ -26,18 +26,30 @@ use Getopt::Long;
 
 my $extractx = `which extractx`;
 chomp $extractx;
+if (($extractx =~ /^\s*$/) and (-r "/usr/local/bin/extractx")) {
+	$extractx = "/usr/local/bin/extractx";
+}
 die "Cannot find extractx tool" if $extractx =~ /^\s*$/;
 
 my $serialize = `which serialize`;
 chomp $serialize;
+if (($serialize =~ /^\s*$/) and (-r "/usr/local/bin/serialize")) {
+	$serialize = "/usr/local/bin/serialize";
+}
 die "Cannot find serialize tool" if $serialize =~ /^\s*$/;
 
 my $humtr = `which humtr`;
 chomp $humtr;
+if (($humtr =~ /^\s*$/) and (-r "/usr/local/bin/humtr")) {
+	$humtr = "/usr/local/bin/humtr";
+}
 die "Cannot find humtr tool" if $humtr =~ /^\s*$/;
 
 my $humcat = `which humcat`;
 chomp $humcat;
+if (($humcat =~ /^\s*$/) and (-r "/usr/local/bin/humcat")) {
+	$humcat = "/usr/local/bin/humcat";
+}
 die "Cannot find humcat tool" if $humcat =~ /^\s*$/;
 
 my $boringWords = <<"EOT";

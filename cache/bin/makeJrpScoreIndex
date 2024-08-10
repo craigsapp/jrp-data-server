@@ -16,6 +16,9 @@ use Getopt::Long;
 
 my $notecount = `which notecount`;
 chomp $notecount;
+if (($notecount =~ /^\s*$/) and (-r "/usr/local/bin/notecount")) {
+	$notecount = "/usr/local/bin/notecount";
+}
 die "Cannot find notecount tool\n" if $notecount =~ /^\s*$/;
 
 

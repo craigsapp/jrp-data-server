@@ -42,6 +42,9 @@ if (!$forceQ) {
 
 my $hum2mid = `which hum2mid`;
 chomp $hum2mid;
+if (($hum2mid =~ /^\s*$/) and (-r "/usr/local/bin/hum2mid")) {
+	$hum2mid = "/usr/local/bin/hum2mid";
+}
 die "ERROR: Cannot locate hum2mid command\n" if $hum2mid =~ /^\s*$/;
 
 my $jrpid = getJrpid($inputfile);
@@ -69,12 +72,20 @@ if (hasMetronomeMarks($inputfile)) {
 }
 
 my %OPTIONS;
-$OPTIONS{'t_t'} = 70;     $OPTIONS{'v_t'} = 73;  # Tenor
-$OPTIONS{'t_c'} = 70;     $OPTIONS{'v_c'} = 70;  # Contra
-$OPTIONS{'t_b'} = 68;     $OPTIONS{'v_b'} = 70;  # Bassus
-$OPTIONS{'t_a'} = 71;     $OPTIONS{'v_a'} = 40;  # Altus
-$OPTIONS{'t_s'} = 74;     $OPTIONS{'v_s'} = 80;  # Superius
-$OPTIONS{'t_d'} = 75;     $OPTIONS{'v_d'} = 90;  # Discantus
+my $bassoon    = 70;
+my $oboe       = 68;
+my $clarinet   = 71;
+my $recorder   = 74;
+my $panflute   = 75;
+my $trombone   = 57;
+my $frenchhorn = 60;
+
+$OPTIONS{'t_s'} = $oboe;      $OPTIONS{'v_s'} = 55;  # Superius
+$OPTIONS{'t_d'} = $panflute;  $OPTIONS{'v_d'} = 90;  # Discantus
+$OPTIONS{'t_a'} = $clarinet;  $OPTIONS{'v_a'} = 55;  # Altus
+$OPTIONS{'t_t'} = $bassoon;   $OPTIONS{'v_t'} = 75;  # Tenor
+$OPTIONS{'t_c'} = $oboe;      $OPTIONS{'v_c'} = 75;  # Contra
+$OPTIONS{'t_b'} = $trombone;  $OPTIONS{'v_b'} = 60;  # Bassus
 
 my $timbres  = "--timbres \'";
 $timbres .= "Tenor:i$OPTIONS{'t_t'},v$OPTIONS{'v_t'}";

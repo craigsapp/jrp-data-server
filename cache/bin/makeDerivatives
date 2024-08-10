@@ -34,6 +34,7 @@
 #                        musedata == Create Musedata file (using humextra's hum2muse)
 #                        musicxml == Create MusicXML file (using converter21)
 #                        thema    == Create Thema search indexes (uses tindex)
+#                        timemap  == Create timemaps from MIDI files.
 #                        wordlist == Create A list of words from any lyrics in the score.
 #
 # Each derivative is made with a separate script in the form derivative-*:
@@ -48,6 +49,7 @@
 #     derivative-mp3       == Creates MP3 files.
 #     derivative-musicxml  == Creates MusicXML files.
 #     derivative-thema     == Creates Thema music search index file(s).
+#     derivative-timemap   == Creates timemap files from MIDI files.
 #     derivative-wordlist  == Creates a list of words from lyrcs in the input score.
 # 
 # Other dynamic-content files are generated on-the-fly by the CGI script.
@@ -72,7 +74,7 @@ GetOptions (
 $groups = "0123456789abcdef" if $groups =~ /^\s*$/;
 $groups = reverse($groups) if $reverseQ;
 
-$derivatives = "incipit,keyscape,lyrics,mei,midi,mp3,musicxml,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
+$derivatives = "incipit,keyscape,lyrics,mei,midi,timemap,mp3,musicxml,musedata,prange,activity,thema,wordlist" if $derivatives =~ /^\s*$/;
 $derivatives =~ s/^[^0-9a-zA-Z_-]+//;
 $derivatives =~ s/[^0-9a-zA-Z_-]+$//;
 my @derivativeList = split (/[^0-9a-zA-Z_-]+/, $derivatives);

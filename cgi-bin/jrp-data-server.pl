@@ -2,7 +2,7 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Wed Dec 13 09:33:28 AM PST 2023
-# Last Modified: Wed Dec 13 09:33:31 AM PST 2023
+# Last Modified: Sat Apr 13 01:50:05 PM PDT 2024
 # Filename:      jrp-data-server/cgi-bin/jrp-data-server.pl
 # Syntax:        perl 5
 # vim:           ts=3
@@ -28,6 +28,8 @@
 #          https://data.josqu.in/Jos2721.mid
 #       mp3 == Conversion of MIDI data to MP3 audio file.
 #          https://data.josqu.in/Jos2721.mp3
+#       timemap == Conversion of MIDI data to timemap file.
+#          https://data.josqu.in/Jos2721-timemap.json
 #       musicxml  == Conversion to MusicXML data.
 #          https://data.josqu.in/Jos2721.musicxml
 #       incipit  == Conversion to SVG musical incipit.
@@ -67,12 +69,26 @@
 
 use strict;
 
-my $newline = "\r\n";
+##############################
+##
+## Command-line programs used in this script.
+##
+
+chomp(my $extractx = `which extractx`);
+chomp(my $ridx = `which ridx`);
+
+errorMessage("Cannot find extractx") if $extractx =~ /^\s*$/;
+errorMessage("Cannot find ridx") if $ridx =~ /^\s*$/;
+
+
 
 ##############################
 ##
 ## Configuration variables:
 ##
+
+# newline == Official HTML headers use MS-DOS newlines:
+my $newline = "\r\n";
 
 # basedir == The location of the files for the website.
 my $basedir    = "/project/jrp-data-server/jrp-data-server";
@@ -111,6 +127,7 @@ my $cgi_form = new CGI;
 my %OPTIONS;
 $OPTIONS{"id"} = $cgi_form->param("id");
 $OPTIONS{"format"} = $cgi_form->param("format");
+$OPTIONS{"server_name"}  = $cgi_form->server_name;
 # "f" is a shortcut for format:
 if ($OPTIONS{"format"} =~ /^\s*$/) {
 	$OPTIONS{"format"}  = $cgi_form->param("f");
@@ -122,8 +139,9 @@ writeLog($logdir, $OPTIONS{"id"}, $OPTIONS{"format"});
 $OPTIONS{"id"} =~ s/[^A-Za-z.0-9]//;
 
 # Return requested data:
-if ($OPTIONS{"format"} =~ /thema/i) {
-	sendThemaIndex($OPTIONS{"id"}, $OPTIONS{"format"});
+if ($OPTIONS{"format"} =~ /url/i) {
+	sendUrlContent();
+	exit(0);
 } elsif ($OPTIONS{"id"} =~ /index/i) {
 	sendIndex($OPTIONS{"id"}, $OPTIONS{"format"});
 } elsif ($OPTIONS{"id"} eq "test") {
@@ -143,6 +161,7 @@ exit(0);
 ###########################################################################
 
 
+
 ##############################
 ##
 ## processParameters -- URLs such as:
@@ -157,7 +176,7 @@ sub processParameters {
 	my ($id, $format) = @_;
 	$ID = $id;
 
-	errorMessage("ID is empty.") if $id =~ /^\s*$/;
+	printInfoPage() if $id =~ /^\s*$/;
 	errorMessage("Strange invalid ID \"$id\".") if $id =~ /^[._-]+$/;
 	errorMessage("ID \"$id\" contains invalid characters.") if $id =~ /[^a-zA-Z0-9,:_-]/;
 
@@ -165,7 +184,7 @@ sub processParameters {
 	$id =~ s/[^0-9a-zA-Z:_-]+$//;
 	my @ids = split(/[^0-9a-zA-Z:_-]+/, $id);
 
-	my @md5s = getMd5s($cacheIndex, @ids);
+	my @md5s = getMd5s($cacheIndex, $OPTIONS{"server_name"}, @ids);
 	if (@md5s < 1) {
 		if (($id =~ /^rism/i) && ($format =~ /json/i)) {
 			# Send an empty JSON object if rism number is unknown:
@@ -175,7 +194,7 @@ sub processParameters {
 			print "$newline";
 			print "[]$newline";
 			exit(0);
-		} 
+		}
 		errorMessage("Entry for $id :: $format was not found.") if @md5s < 1;
 	}
 
@@ -228,6 +247,10 @@ sub processParameters {
 		sendDataContent("activity-separate-notitle-gnuplot", $id, @md5s);
 	} elsif ($format eq "mp3") {
 		sendDataContent("mp3", $id, @md5s);
+	} elsif ($format eq "timemap") {
+		sendDataContent("timemap", $id, @md5s);
+	} elsif ($format eq "timemap.json") {
+		sendDataContent("timemap", $id, @md5s);
 	} elsif ($format eq "lyrics") {
 		sendDataContent("lyrics", $id, @md5s);
 	} elsif ($format eq "lyrics-modern") {
@@ -242,6 +265,31 @@ sub processParameters {
 	}
 
 	errorMessage("Unknown data format: $format for ID $id");
+}
+
+
+
+##############################
+##
+## sendUrlContent -- Check to see what the URL is (for testing different
+##    server name accesses to the file).
+##
+
+sub sendUrlContent {
+	my $protocol = $cgi_form->protocol;
+	my $server_name = $cgi_form->server_name;
+	my $server_port = $cgi_form->server_port;
+	my $port = ($protocol eq 'https' && $server_port != 443) || ($protocol eq 'http' && $server_port != 80) ? ":$server_port" : '';
+	my $script_name = $cgi_form->script_name;
+	my $query_string = $cgi_form->query_string;
+	my $query = $query_string ? "?$query_string" : '';
+	my $url = "$protocol://$server_name$port$script_name$query";
+
+	my $mime = "text/plain";
+	my $charset = ";charset=UTF-8";
+	print "Content-Type: $mime$charset$newline";
+	print "$newline";
+	print $url;
 }
 
 
@@ -308,6 +356,10 @@ sub sendDataContent {
 		sendMidiContent($md5s[0]);
 	} elsif ($format eq "mp3") {
 		sendMp3Content($md5s[0]);
+	} elsif ($format eq "timemap") {
+		sendTimemapContent($md5s[0]);
+	} elsif ($format eq "timemap") {
+		sendTimemapContent($md5s[0]);
 	} elsif ($format eq "midi") {
 		sendMidiContent($md5s[0]);
 	} elsif ($format eq "lyrics") {
@@ -775,6 +827,45 @@ sub sendMidiContent {
 
 ##############################
 ##
+## sendTimemapContent -- Extracted timings from MIDI files.
+##
+
+sub sendTimemapContent {
+	my ($md5) = @_;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $format = "-timemap.json";
+	# my $mime = "application/json";
+	my $mime = "text/plain";
+
+	# Timemap data is stored in gzip-compressed file.  If the browser
+	# accepts gzip compressed data, send the compressed form of the data;
+	# otherwise, unzip and send as plain text.
+	my $compressQ = 0;
+	$compressQ = 1 if $ENV{'HTTP_ACCEPT_ENCODING'} =~ /\bgzip\b/;
+	if (!-r "$cachedir/$cdir/$md5$format.gz") {
+		errorMessage("Timemap file is missing for $OPTIONS{'id'}.");
+	}
+	if ($compressQ) {
+		my $data = `cat "$cachedir/$cdir/$md5$format.gz"`;
+		print "Content-Type: $mime$newline";
+		print "Content-Type: $mime;charset=UTF-8$newline";
+		print "Content-Encoding: gzip$newline";
+		print "$newline";
+		print $data;
+		exit(0);
+	}
+
+	my $data = `zcat "$cachedir/$cdir/$md5$format.gz"`;
+	print "Content-Type: $mime;charset=UTF-8$newline";
+	print "$newline";
+	print $data;
+	exit(0);
+}
+
+
+
+##############################
+##
 ## sendMp3Content -- (Static content) Send MP3 conversion of MIDI data.
 ##
 
@@ -1010,18 +1101,19 @@ sub getCacheSubdir {
 ##
 
 sub getMd5s {
-	my ($cacheIndex, @ids) = @_;
+	my ($cacheIndex, $server, @ids) = @_;
 	my @output;
 	for (my $i=0; $i<@ids; $i++) {
-		push(@output, getMd5($cacheIndex, $ids[$i]));
+		push(@output, getMd5($cacheIndex, $server, $ids[$i]));
 	}
 	return @output;
 }
 
 sub getMd5 {
-	my ($cacheIndex, $id) = @_;
+	my ($cacheIndex, $server , $id) = @_;
 	open (FILE, $cacheIndex) or errorMessage("Cannot find cache index $cacheIndex.");
 	my @headings;
+	my $targetIndex = 1;
 	if (($id =~ /^pms:/) || ($id =~ /^rism:/)) {
 		# Multiple IDs possible for PMS and RISM IDs since they
 		# refer to works or collections.
@@ -1031,12 +1123,17 @@ sub getMd5 {
 			chomp $line;
 			if ($line =~ /^\*\*/) {
 				my @headings = split(/\t+/, $line);
+				my $targetIndex = getTargetIndex($server, @headings);
 				next;
 			}
 			next if $line =~ /^\*/;
 			next if $line =~ /^\s*$/;
 			next if $line !~ /^([^\t]+).*\t($id)(\t|$)/;
-			$output[@output] = $1;
+			my $md5 = $1;
+			my @data = split(/\t+/, $line);
+			if ($data[$targetIndex] eq $id) {
+				$output[@output] = $md5;
+			}
 		}
 		close FILE;
 		return @output;
@@ -1046,13 +1143,18 @@ sub getMd5 {
 			chomp $line;
 			if ($line =~ /^\*\*/) {
 				my @headings = split(/\t+/, $line);
+				$targetIndex = getTargetIndex($server, @headings);
 				next;
 			}
 			next if $line =~ /^\*/;
 			next if $line =~ /^\s*$/;
 			next if $line !~ /^([^\t]+).*\t($id)(\t|$)/;
-			close FILE;
-			return ($1);
+			my $md5 = $1;
+			my @data = split(/\t+/, $line);
+			if ($data[$targetIndex] eq $id) {
+				close FILE;
+				return ($md5);
+			}
 		}
 	}
 	close FILE;
@@ -1065,6 +1167,30 @@ sub getMd5 {
 		}
 	}
 	return "";
+}
+
+
+
+##############################
+##
+## getTargetIndex --
+##
+
+sub getTargetIndex {
+	my ($server, @headings) = @_;
+	for (my $i=0; $i<@headings; $i++) {
+		if (($headings[$i] eq "**jrpid") && ($server =~ /josqu\.?in/i)) {
+			return $i;
+		}
+		if (($headings[$i] eq "**tasso") && ($server =~ /tassomusic/i)) {
+			return $i;
+		}
+		if (($headings[$i] eq "**1520s") && ($server =~ /1520/i)) {
+			return $i;
+		}
+	}
+	# Default to JRP index, which is the first spine after md5sums:
+	return 1;
 }
 
 
@@ -1337,6 +1463,301 @@ sub getDate {
 	$output{"timezone"} = $isdst;
 	return %output;
 }
+
+
+
+##############################
+##
+## printInfoPage -- Print a list of possible data services from the
+##      data server.
+##
+## Cache index exinterp line: **md5	**jrpid	**tasso	**1520s
+##
+
+sub printInfoPage {
+	my $server = $OPTIONS{"server_name"};
+
+	my $cacheIndex = "$cachedir/cache-index.hmd";
+	my @ids;
+	if ($server =~ /tasso/) {
+		@ids = sort `extractx -i tasso $cacheIndex | ridx -dH`;
+	} elsif ($server =~ /1520s/) {
+		@ids = sort `extractx -i 1520s $cacheIndex | ridx -dH`;
+	} else {
+		@ids = sort `extractx -i jrpid $cacheIndex | ridx -dH`;
+	}
+	my $options = "<option>" . join("</option><option>", @ids) . "</option>";
+	my $mime = "text/html";
+	my $charset = ";charset=UTF-8";
+	print "Content-Type: $mime$charset$newline";
+	print "$newline";
+	print <<"EOT";
+<html>
+<head>
+<title>API </title>
+<script src="https://aton.sapp.org/javascripts/aton.min.js"></script>
+<body>
+
+<h1>Data API for $server</h1>
+
+<p>Choose and example ID:
+<select id="select-id" onchange="displaySelectedId()">$options</select>
+</p>
+
+<style>
+body { font-size: 1rem; }
+table { border-collapse: collapse; }
+table tr td:first-child { white-space: nowrap; }
+table td { text-align: top; padding-right: 10px; }
+table tr.group td { font-size: 1.15rem; font-weight: bold; padding-top: 10px; }
+table tr.group td::after { content: ":"; }
+table tr:hover { background-color: #fcfcfc; }
+a { text-decoration: none }
+a b { color: purple; }
+</style>
+
+<script>
+
+var TEMPLATE = {};
+
+document.addEventListener("DOMContentLoaded", function () {
+	let aton = new ATON;
+	let adata = document.querySelector("script#aton-data").textContent;
+	TEMPLATE = aton.parse(adata);
+	displaySelectedId();
+});
+
+function displaySelectedId() {
+	let id = document.querySelector("select#select-id").value;
+	let contents = "";
+	contents += "<table>";
+
+	let group = "";
+	let entries = TEMPLATE.ENTRY;
+	for (let i=0; i<entries.length; i++) {
+		let thisGroup = entries[i].GROUP || "";
+		if (thisGroup !== group) {
+		   contents += `<tr class='group'><td colspan='2'>\${thisGroup}</td></tr>\\n`;
+			group = thisGroup;
+		}
+		let fileTemplate = entries[i].FILE;
+		let fileUrl = fileTemplate.replace(/\{ID\}/g, id);
+		let fileText = fileTemplate.replace(/\{ID\}/g, `<b>\${id}</b>`);
+		let description = entries[i].DESCRIPTION;
+		let row = "";
+		row += "<tr>";
+		row += "<td>";
+		row += `<a target="_blank" href="\${fileUrl}">\${fileText}</a>`;
+		row += "</td>";
+		row += "<td>";
+		row += description;
+		row += "</td>";
+		row += "</tr>\\n";
+console.warn("ENTRY", i, entries[i], row);
+		contents += row;
+	}
+
+	contents += "</table>";
+	let element = document.querySelector("#api");
+//console.log("CONTENTS", contents);
+	element.innerHTML = contents;
+}
+
+</script>
+
+<div id="api"></div>
+
+
+
+<script id="aton-data" type="text/x-aton">
+
+\@SERVER: $server
+
+\@\@BEGIN: ENTRY
+\@GROUP:
+\@FILE: {ID}.krn
+\@DESCRIPTION: Humdrum digital score
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Conversions
+\@FILE: {ID}.musicxml
+\@DESCRIPTION: MusicXML conversion of digital score
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Conversions
+\@FILE: {ID}.mei
+\@DESCRIPTION: MEI conversion of digital score
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Conversions
+\@FILE: {ID}.mp3
+\@DESCRIPTION: MP3 rendering of score (from MIDI file)
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Conversions
+\@FILE: {ID}.mid
+\@DESCRIPTION: MIDI digital score
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Conversions
+\@FILE: {ID}-timemap.json
+\@DESCRIPTION: Timemap extracted MIDI digital score (used for MP3 playback highlighting)
+\@\@END:   ENTRY
+
+\@\@\@ Notation
+
+\@\@BEGIN: ENTRY
+\@GROUP: Notation
+\@FILE: {ID}-incipit.svg
+\@DESCRIPTION: First line of rendered music as an SVG image
+\@\@END:   ENTRY
+
+\@\@\@ Pitch-range plots
+
+\@\@BEGIN: ENTRY
+\@GROUP: Pitch-range analyses
+\@FILE: {ID}-prange-attack.svg
+\@DESCRIPTION: Pitch ranges by note attacks for voices in score, as and SVG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Pitch-range analyses
+\@FILE: {ID}-prange-attack.pmx
+\@DESCRIPTION: Pitch ranges by note attacks for voices in score, as input PMX for SCORE
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Pitch-range analyses
+\@FILE: {ID}-prange-duration.svg
+\@DESCRIPTION: Pitch ranges by note durations for voices in score, as and SVG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Pitch-range analyses
+\@FILE: {ID}-prange-attack.pmx
+\@DESCRIPTION: Pitch ranges by note durations for voices in score, as input PMX for SCORE
+\@\@END:   ENTRY
+
+\@\@\@ Activity plots
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-merged.png
+\@DESCRIPTION: Activity plots, merged voice counts, PNG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-merged.gnuplot
+\@DESCRIPTION: Activity plots, merged voice counts, GNUPLOT source file
+\@\@END:   ENTRY
+
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-separate.png
+\@DESCRIPTION: Activity plots, separate voice counts, PNG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-separate.gnuplot
+\@DESCRIPTION: Activity plots, separate voice counts, GNUPLOT source file
+\@\@END:   ENTRY
+
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-merged-notitle.png
+\@DESCRIPTION: Activity plots, merged voice counts, no title, PNG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-merged-notitle.gnuplot
+\@DESCRIPTION: Activity plots, merged voice counts, no title, GNUPLOT source file
+\@\@END:   ENTRY
+
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-separate-notitle.png
+\@DESCRIPTION: Activity plots, separate voice counts, no title, PNG image
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Activity plots
+\@FILE: {ID}-activity-separate-notitle.gnuplot
+\@DESCRIPTION: Activity plots, separate voice counts, no title, GNUPLOT source file
+\@\@END:   ENTRY
+
+\@\@\@ Keyscapes
+
+\@\@BEGIN: ENTRY
+\@GROUP: Keyscape plots
+\@FILE: {ID}-keyscape-abspre.png
+\@DESCRIPTION: Keyscape, absolute colors, preprocessed
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Keyscape plots
+\@FILE: {ID}-keyscape-relpre.png
+\@DESCRIPTION: Keyscape, relative colors, preprocessed
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Keyscape plots
+\@FILE: {ID}-keyscape-abspost.png
+\@DESCRIPTION: Keyscape, absolute colors, postprocessed
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Keyscape plots
+\@FILE: {ID}-keyscape-relpost.png
+\@DESCRIPTION: Keyscape, relative colors, postprocessed
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Keyscape plots
+\@FILE: {ID}.keyscape-info
+\@DESCRIPTION: Keyscape image timing info
+\@\@END:   ENTRY
+
+\@\@\@ Lyrics extraction
+
+\@\@BEGIN: ENTRY
+\@GROUP: Lyrics extraction
+\@FILE: {ID}.lyrics
+\@DESCRIPTION: HTML page template with extracted lyrics (text underlay) 
+	by voice.
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Lyrics extraction
+\@FILE: {ID}.lyrics-modern
+\@DESCRIPTION: HTML page template with extracted lyrics (text underlay) 
+	by voice.  Letters/words in text have been modernized 
+	(when available; otherwise original lyrics will be used).
+\@\@END:   ENTRY
+
+</script>
+
+
+</body>
+</html>
+EOT
+
+exit(0);
+
+
+}
+
+
 
 
 

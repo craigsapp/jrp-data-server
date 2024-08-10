@@ -15,6 +15,20 @@
 use strict;
 use Getopt::Long;
 
+my $verovio = `which verovio`;
+chomp $verovio;
+if (($verovio =~ /^\s*$/) and (-r "/usr/local/bin/verovio")) {
+	$verovio = "/usr/local/bin/verovio";
+}
+die "ERROR: Cannot locate verovio command\n" if $verovio =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
+
 my $forceQ = 0;
 Getopt::Long::Configure("bundling");
 GetOptions (
@@ -38,19 +52,11 @@ if (!$forceQ) {
 	unlink("$outputfile.gz");
 }
 
-my $verovio = `which verovio`;
-chomp $verovio;
-die "ERROR: Cannot locate verovio command\n" if $verovio =~ /^\s*$/;
-
-my $gzip = `which gzip`;
-chomp $gzip;
-die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
-
-
-`$verovio $inputfile -atmei -o $outputfile`;
+my $command = "$verovio $inputfile -atmei -o $outputfile";
+`$command`;
 
 # Maybe also check if file contains some expected XML elements.
-#
+
 `$gzip $outputfile`;
 
 

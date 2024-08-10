@@ -3,7 +3,7 @@
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Sat Dec 16 10:50:37 AM PST 2023
 # Last Modified: Sat Dec 16 10:50:40 AM PST 2023
-# Filename:      cache/bin/derivative-mp3
+# Filename:      cache/bin/derivative-timemap
 # Syntax:        perl 5
 # vim:           ts=3
 #
@@ -15,6 +15,20 @@
 
 use strict;
 use Getopt::Long;
+
+my $midi2timemap = `which midi2timemap`;
+chomp $midi2timemap;
+if (($midi2timemap =~ /^\s*$/) and (-r "/usr/local/bin/midi2timemap")) {
+	$midi2timemap = "/usr/local/bin/midi2timemap";
+}
+die "ERROR: Cannot locate midi2timemap command\n" if $midi2timemap =~ /^\s*$/;
+
+my $gzip = `which gzip`;
+chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
+die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 my $forceQ = 0;
 Getopt::Long::Configure("bundling");
@@ -29,37 +43,24 @@ my $md5id = $ARGV[0];
 die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
 
 my $inputfile = "$md5id.mid";
-my $outputfile = "$md5id.mp3";
-
+my $outputfile = "$md5id-timemap.json";
 
 die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
 
 if (!$forceQ) {
-	exit 0 if -r "$outputfile";
+	exit 0 if -r "$outputfile.gz";
+} elsif (-r "$outputfile.gz") {
+	unlink("$outputfile.gz");
 } elsif (-r "$outputfile") {
 	unlink("$outputfile");
 }
 
-my $timidity = `which timidity`;
-chomp $timidity;
-if (($timidity =~ /^\s*$/) and (-r "/usr/bin/timidity")) {
-	$timidity = "/usr/bin/timidity";
-}
-die "ERROR: Cannot locate timidity command\n" if $timidity =~ /^\s*$/;
-
-my $lame = `which lame`;
-chomp $lame;
-if (($lame =~ /^\s*$/) and (-r "/usr/bin/lame")) {
-	$lame = "/usr/bin/lame";
-}
-die "ERROR: Cannot locate lame command\n" if $lame =~ /^\s*$/;
-
 print STDERR "Creating $outputfile ...";
-my $command = "$timidity $inputfile -Ow -o - | lame -V2 - > $outputfile";
+my $command = "$midi2timemap -q -R $inputfile > $outputfile";
 my $output = `$command`;
 print STDERR " Done.\n";
-# print STDERR "\t$command\n";
 
+`$gzip $outputfile`;
 
 
 

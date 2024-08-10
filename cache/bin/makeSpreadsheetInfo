@@ -21,6 +21,9 @@ use Getopt::Long;
 my $cacheDepth = 1;
 
 my $wget = `which wget`;
+if (($wget =~ /^\s*$/) and (-r "/usr/bin/wget")) {
+	$wget = "/usr/bin/wget";
+}
 chomp $wget;
 die "Cannot find wget program\n" if $wget =~ /^\s*$/;
 

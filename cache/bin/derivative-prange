@@ -20,14 +20,23 @@ use Getopt::Long;
 
 my $prange = `which prange`;
 chomp $prange;
+if (($prange =~ /^\s*$/) and (-r "/usr/local/bin/prange")) {
+	$prange = "/usr/local/bin/prange";
+}
 die "ERROR: Cannot locate prange command\n" if $prange =~ /^\s*$/;
 
 my $pmx2svg = `which pmx2svg`;
 chomp $pmx2svg;
+if (($pmx2svg =~ /^\s*$/) and (-r "/usr/local/bin/pmx2svg")) {
+	$pmx2svg = "/usr/local/bin/pmx2svg";
+}
 die "ERROR: Cannot locate pmx2svg command\n" if $pmx2svg =~ /^\s*$/;
 
 my $gzip = `which gzip`;
 chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
 die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 my $forceQ = 0;

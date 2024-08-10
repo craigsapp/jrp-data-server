@@ -41,14 +41,23 @@ if (!$forceQ) {
 
 my $tie = `which tie`;
 chomp $tie;
+if (($tie =~ /^\s*$/) and (-r "/usr/local/bin/tie")) {
+	$tie = "/usr/local/bin/tie";
+}
 die "Error: Cannot locate tie command\n" if $tie =~ /^\s*$/;
 
 my $humdrum2musicxml = `which humdrum2musicxml`;
 chomp $humdrum2musicxml;
+if (($humdrum2musicxml =~ /^\s*$/) and (-r "/usr/local/bin/humdrum2musicxml")) {
+	$humdrum2musicxml = "/usr/local/bin/humdrum2musicxml";
+}
 die "ERROR: Cannot locate humdrum2muscxml command\n" if $humdrum2musicxml =~ /^\s*$/;
 
 my $gzip = `which gzip`;
 chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
 die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 

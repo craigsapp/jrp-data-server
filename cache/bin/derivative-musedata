@@ -16,6 +16,9 @@
 use strict;
 use Getopt::Long;
 
+# suppress for now
+exit(0);
+
 my $forceQ = 0;
 Getopt::Long::Configure("bundling");
 GetOptions (
@@ -41,15 +44,24 @@ if (!$forceQ) {
 
 my $tie = `which tie`;
 chomp $tie;
+if (($tie =~ /^\s*$/) and (-r "/usr/local/bin/tie")) {
+	$tie = "/usr/local/bin/tie";
+}
 die "Error: Cannot locate tie command\n" if $tie =~ /^\s*$/;
 
 my $autostem = `which autostem`;
 chomp $autostem;
+if (($autostem =~ /^\s*$/) and (-r "/usr/local/bin/autostem")) {
+	$autostem = "/usr/local/bin/autostem";
+}
 die "Error: Cannot locate autostem command\n" if $autostem =~ /^\s*$/;
 
 my $hum2muse = `which hum2muse`;
 chomp $hum2muse;
-die "ERROR: Cannot locate humdrum2muscxml command\n" if $hum2muse =~ /^\s*$/;
+if (($hum2muse =~ /^\s*$/) and (-r "/usr/local/bin/hum2muse")) {
+	$hum2muse = "/usr/local/bin/hum2muse";
+}
+die "ERROR: Cannot locate hum2muse command\n" if $hum2muse =~ /^\s*$/;
 
 my $gzip = `which gzip`;
 chomp $gzip;

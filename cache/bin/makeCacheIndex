@@ -2,13 +2,13 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Wed Dec 13 09:09:27 AM PST 2023
-# Last Modified: Wed Dec 13 09:14:46 AM PST 2023
+# Last Modified: Wed Jun 12 08:15:30 AM PDT 2024
 # Filename:      cache/bin/makeIndex
 # Syntax:        perl 5
 # vim:           ts=3
 #
 # Description:   Reads the files in ../kern directory to create an index of MD5
-#                mappings to JRP IDs.
+#                mappings to JRP and 1520s IDs.
 #
 
 use strict;
@@ -20,9 +20,12 @@ if ($md5sum =~ /^\s*$/) {
 	chomp $md5sum;
 }
 die "Cannot find md5 or md5sum program." if $md5sum =~ /^\s*$/;
+# md5sum is called md5 on MacOS (but not checked for here)
 
 my $srcdir = "../kern";
 
+# $srcdir/*.krn files are expected to be symbolic links
+# to the repository that the file belongs to.
 my @files = sort glob("$srcdir/*.krn");
 
 my $index = generateIndex(@files);
@@ -45,15 +48,15 @@ sub generateIndex {
 	$output .= "!! Cache index, meaning of each column:\n";
 	$output .= "!! **md5   == First eight digits of MD5 checksum used to cache file.\n";
 	$output .= "!! **jrpid == JRP ID (Start of file name up to first dash).\n";
-	$output .= "**md5\t**jrpid\n";
+	$output .= "!! **tasso == Tasso in Music Project ID (Start of file name up to first dash).\n";
+	$output .= "!! **1520s == JRP ID (Start of file name up to first dash).\n";
+	$output .= "**md5\t**jrpid\t**tasso\t**1520s\n";
+	my $spineCount = 4;
+
+	my %md5sums;
+	my %filemd5s;
 	for (my $i=0; $i<@files; $i++) {
 		my $file = $files[$i];
-		my $base = $file;
-		$base =~ s/.*\///;
-		$base =~ s/\.krn$//;
-		my $shortbase = $base;
-		$shortbase =~ s/-.*//;
-
 		my $sum = `$md5sum $file`;
 		if ($sum =~ /([0-9a-f]{32})/) {
 			$sum = $1;
@@ -63,10 +66,50 @@ sub generateIndex {
 		$sum =~ /^(.{8})/;
 		my $shortsum = $1;
 
-		$output .= "$shortsum\t$shortbase\n";
+		$filemd5s{$file} = $shortsum;
+
+		if ($md5sums{$shortsum} =~ /^\s*$/) {
+			$md5sums{$shortsum} = $file;
+		} else {
+			$md5sums{$shortsum} .= "\t$file";
+		}
 	}
-	$output .= "*-\t*-\n";
+
+	my @keys = sort keys %md5sums;
+	foreach my $md5short (@keys) {
+		my $files = $md5sums{$md5short};
+		my @list = split(/\t+/, $files);
+		my $jrpid = ".";
+		my $tasso = ".";
+		my $s1520 = ".";
+		foreach my $file (@list) {
+			die "File \"$file\" is not a symbolic link." if !-l $file;
+			my $link = readlink $file;
+			my $base = $file;
+			$base =~ s/.*\///;
+			$base =~ s/\.krn$//;
+			my $shortbase = $base;
+			$shortbase =~ s/-.*//;
+			if ($link =~ /jrp-scores/) {
+				$jrpid = $shortbase;
+			} elsif ($link =~ /1520s-project-scores/) {
+				$s1520 = $shortbase;
+			} elsif ($link =~ /tasso-scores/) {
+				$tasso = $shortbase;
+			}
+		}
+		$output .= "$md5short\t$jrpid\t$tasso\t$s1520\n";
+	}
+
+	for (my $i=0; $i<$spineCount; $i++) {
+		$output .= "*-";
+		if ($i < $spineCount - 1) {
+			$output .= "\t";
+		}
+	}
+	$output .= "\n";
 	return $output;
 }
+
 
 

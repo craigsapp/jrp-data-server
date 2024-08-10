@@ -15,9 +15,9 @@
 #
 # Possible IDs:
 #    file     == Full filename
-#    fileid   == Unique part of original filenames in repositories.
-#    cenid    == Century enumeration (POPC-2 only)
-#    sqlid    == Postgress SQL enumeration (currently POPC-1 only)
+#    jrpid    == Unique ID for JRP data
+#    tasso    == Unique ID for the Tasso in Music Project
+#    1520s    == Unique ID for The 1520s project data
 # Possible formats:
 #    mei      == MEI data conversion
 #    musicxml == MusicXML data conversion

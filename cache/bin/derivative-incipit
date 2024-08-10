@@ -2,7 +2,7 @@
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Wed 20 Oct 2021 01:09:43 AM PDT
-# Last Modified: Wed 20 Oct 2021 01:09:47 AM PDT
+# Last Modified: Tue Jun 11 06:03:34 PM PDT 2024
 # Filename:      cache/bin/derivative-incipit
 # Syntax:        perl 5
 # vim:           ts=3
@@ -41,14 +41,20 @@ if (!$forceQ) {
 
 my $verovio = `which verovio`;
 chomp $verovio;
+if (($verovio =~ /^\s*$/) and (-r "/usr/local/bin/verovio")) {
+	$verovio = "/usr/local/bin/verovio";
+}
 die "ERROR: Cannot locate verovio command\n" if $verovio =~ /^\s*$/;
 
 my $gzip = `which gzip`;
 chomp $gzip;
+if (($gzip =~ /^\s*$/) and (-r "/usr/bin/gzip")) {
+	$gzip = "/usr/bin/gzip";
+}
 die "ERROR: Cannot locate gzip command\n" if $gzip =~ /^\s*$/;
 
 print STDERR "Creating $outputfile ...";
-my $command = "verovio --page-height 100 --scale 39";
+my $command = "$verovio --page-height 100 --scale 39";
 $command .= " --page-width 2500  --header none --adjust-page-height";
 
 my @contents = `cat $inputfile`;
