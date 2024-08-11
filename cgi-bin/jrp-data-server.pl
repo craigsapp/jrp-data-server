@@ -32,6 +32,8 @@
 #          https://data.josqu.in/Jos2721-timemap.json
 #       musicxml  == Conversion to MusicXML data.
 #          https://data.josqu.in/Jos2721.musicxml
+#       mds == Conversion to MuseData.
+#          https://data.josqu.in/Jos2721.mds
 #       incipit  == Conversion to SVG musical incipit.
 #          https://data.josqu.in/Jos2721-incipit.svg
 #       prange ==  Pitch range plots
@@ -205,6 +207,8 @@ sub processParameters {
 		sendDataContent($format, $id, @md5s);
 	} elsif ($format eq "musicxml") {
 		sendDataContent($format, $id, @md5s);
+	} elsif (($format eq "mds") || ($format eq "musedata") || ($format eq "md2")) {
+		sendDataContent("mds", $id, @md5s);
 	} elsif ($format eq "incipit.svg") {
 		sendDataContent($format, $id, @md5s);
 	} elsif ($format eq "keyscape-abspre.png") {
@@ -311,6 +315,8 @@ sub sendDataContent {
 		sendMeiContent($md5s[0]);
 	} elsif ($format eq "musicxml") {
 		sendMusicxmlContent($md5s[0]);
+	} elsif ($format eq "mds" || $format eq "musedata" || $format eq "md2") {
+		sendMuseDataContent($md5s[0]);
 	} elsif ($format =~ /incipit(\.svg)?/) {
 		sendMusicalIncipitContent($md5s[0]);
 	} elsif ($format =~ /^keyscape-info/) {
@@ -616,6 +622,7 @@ sub sendMeiContent {
 	if ($compressQ) {
 		my $data = `cat "$cachedir/$cdir/$md5.$format.gz"`;
 		print "Content-Type: $mime$newline";
+		print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.mei\"$newline";
 		print "Content-Encoding: gzip$newline";
 		print "$newline";
 		print $data;
@@ -624,6 +631,7 @@ sub sendMeiContent {
 
 	my $data = `zcat "$cachedir/$cdir/$md5.$format.gz"`;
 	print "Content-Type: $mime$newline";
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.mei\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -653,6 +661,46 @@ sub sendMusicxmlContent {
 	if ($compressQ) {
 		my $data = `cat "$cachedir/$cdir/$md5.$format.gz"`;
 		print "Content-Type: $mime$newline";
+		print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.musicxml\"$newline";
+		print "Content-Encoding: gzip$newline";
+		print "$newline";
+		print $data;
+		exit(0);
+	}
+
+	my $data = `zcat "$cachedir/$cdir/$md5.$format.gz"`;
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.musicxml\"$newline";
+	print "Content-Type: $mime$newline";
+	print "$newline";
+	print $data;
+	exit(0);
+}
+
+
+
+##############################
+##
+## sendMuseDataContent -- (Static content) Send MuseData conversion of Humdrum data.
+##
+
+sub sendMuseDataContent {
+	my ($md5) = @_;
+	my $cdir = getCacheSubdir($md5, $cacheDepth);
+	my $format = "mds";
+	my $mime = "text/plain";
+
+	# MuseData data is stored in gzip-compressed file.  If the browser
+	# accepts gzip compressed data, send the compressed form of the data;
+	# otherwise, unzip and send as plain text.
+	my $compressQ = 0;
+	$compressQ = 1 if $ENV{'HTTP_ACCEPT_ENCODING'} =~ /\bgzip\b/;
+	if (!-r "$cachedir/$cdir/$md5.$format.gz") {
+		errorMessage("MuseData file is missing for $OPTIONS{'id'}.");
+	}
+	if ($compressQ) {
+		my $data = `cat "$cachedir/$cdir/$md5.$format.gz"`;
+		print "Content-Type: $mime$newline";
+		print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.mds\"$newline";
 		print "Content-Encoding: gzip$newline";
 		print "$newline";
 		print $data;
@@ -661,6 +709,7 @@ sub sendMusicxmlContent {
 
 	my $data = `zcat "$cachedir/$cdir/$md5.$format.gz"`;
 	print "Content-Type: $mime$newline";
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.mds\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -690,6 +739,7 @@ sub sendMusicalIncipitContent {
 	if ($compressQ) {
 		my $data = `cat "$cachedir/$cdir/$md5-incipit.$format.gz"`;
 		print "Content-Type: $mime$newline";
+		print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}-incipit.svg\"$newline";
 		print "Content-Encoding: gzip$newline";
 		print "$newline";
 		print $data;
@@ -697,6 +747,7 @@ sub sendMusicalIncipitContent {
 	}
 
 	my $data = `zcat "$cachedir/$cdir/$md5-incipit.$format.gz"`;
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}-incipit.svg\"$newline";
 	print "Content-Type: $mime$newline";
 	print "$newline";
 	print $data;
@@ -717,6 +768,7 @@ sub sendKeyscapeContent {
 
 	$format =~ s/[-.]png$//;
 	my $data = `cat "$cachedir/$cdir/$md5-$format.png"`;
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}-$format.png\"$newline";
 	print "Content-Type: $mime$newline";
 	print "$newline";
 	print $data;
@@ -775,7 +827,7 @@ sub sendPngContent {
 
 	my $data = `cat "$cachedir/$cdir/$md5-$tag.png"`;
 	print "Content-Type: $mime$newline";
-	print "Content-Disposition: attachment; filename=\"data.png\"$newline";
+	print "Content-Disposition: inline; filename=\"$ID-$tag.png\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -785,7 +837,7 @@ sub sendPngContent {
 
 ##############################
 ##
-## sendGnuplotContent -- (Static content) Send PNG image.
+## sendGnuplotContent -- Gnuplot for creating activity plots.
 ##
 
 sub sendGnuplotContent {
@@ -796,7 +848,7 @@ sub sendGnuplotContent {
 
 	my $data = `cat "$cachedir/$cdir/$md5-$tag.gnuplot"`;
 	print "Content-Type: $mime$newline";
-	print "Content-Disposition: attachment; filename=\"data.txt\"$newline";
+	print "Content-Disposition: inline; filename=\"$ID-$tag.gnuplot\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -817,7 +869,7 @@ sub sendMidiContent {
 
 	my $data = `cat "$cachedir/$cdir/$md5.$format"`;
 	print "Content-Type: $mime$newline";
-	print "Content-Disposition: attachment; filename=\"data.mid\"$newline";
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}.mid\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -847,8 +899,8 @@ sub sendTimemapContent {
 	}
 	if ($compressQ) {
 		my $data = `cat "$cachedir/$cdir/$md5$format.gz"`;
-		print "Content-Type: $mime$newline";
 		print "Content-Type: $mime;charset=UTF-8$newline";
+		print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}-timemap.json\"$newline";
 		print "Content-Encoding: gzip$newline";
 		print "$newline";
 		print $data;
@@ -857,6 +909,7 @@ sub sendTimemapContent {
 
 	my $data = `zcat "$cachedir/$cdir/$md5$format.gz"`;
 	print "Content-Type: $mime;charset=UTF-8$newline";
+	print "Content-Disposition: inline; filename=\"$OPTIONS{'id'}-timemap.json\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -877,7 +930,7 @@ sub sendMp3Content {
 
 	my $data = `cat "$cachedir/$cdir/$md5.$format"`;
 	print "Content-Type: $mime$newline";
-	print "Content-Disposition: attachment; filename=\"$ID.mp3\"$newline";
+	print "Content-Disposition: inline; filename=\"$ID.mp3\"$newline";
 	print "$newline";
 	print $data;
 	exit(0);
@@ -1508,11 +1561,12 @@ sub printInfoPage {
 body { font-size: 1rem; }
 table { border-collapse: collapse; }
 table tr td:first-child { white-space: nowrap; }
-table td { text-align: top; padding-right: 10px; }
+table td { vertical-align: top; padding-right: 10px; }
 table tr.group td { font-size: 1.15rem; font-weight: bold; padding-top: 10px; }
 table tr.group td::after { content: ":"; }
 table tr:hover { background-color: #fcfcfc; }
-a { text-decoration: none }
+a { color: #00e; text-decoration: none }
+a:visited { color: #00e; text-decoration: none; }
 a b { color: purple; }
 </style>
 
@@ -1528,8 +1582,37 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function displaySelectedId() {
+	const server = "$server";
 	let id = document.querySelector("select#select-id").value;
 	let contents = "";
+
+	contents += "<ul>\\n";
+
+	contents += "<li>"
+	contents += "<b>Work page:</b> ";
+	let url;
+	let urlTitle;
+	if (server.match(/1520s/)) {
+		url = `https://1520s-project.org/work/?id=\${id}`;
+		urlTitle = `https://1520s-project.org/work/?id=<b>\${id}</b>`;
+	} else if (server.match(/tasso/)) {
+		url = `https://www.tassomusic.org/work/?id=\${id}`;
+		urlTitle = `https://www.tassomusic.org/work/?id=<b>\${id}</b>`;
+	} else {
+		url = `https://josquin.stanford.edu/work/?id=\${id}`;
+		urlTitle = `https://josquin.stanford.edu/work/?id=<b>\${id}</b>`;
+	}
+	contents += `<a target="_blank" href="\${url}">\${urlTitle}</a>`;
+	contents += "</li>\\n";
+
+	let vhv = `https://verovio.humdrum.org/?file=https://\${server}/\${id}.krn`;
+	let vhvTitle = `https://verovio.humdrum.org/?file=https://\${server}/<b>\${id}</b>.krn`;
+	contents += "<li>";
+	contents += `<b>VHV</b>: <a target="_blank" href="\${vhv}">\${vhvTitle}</a>`;
+	contents += "</li>\\n";
+
+	contents += "</ul>\\n";
+
 	contents += "<table>";
 
 	let group = "";
@@ -1553,13 +1636,13 @@ function displaySelectedId() {
 		row += description;
 		row += "</td>";
 		row += "</tr>\\n";
-console.warn("ENTRY", i, entries[i], row);
+		// console.warn("ENTRY", i, entries[i], row);
 		contents += row;
 	}
 
 	contents += "</table>";
 	let element = document.querySelector("#api");
-//console.log("CONTENTS", contents);
+	//console.log("CONTENTS", contents);
 	element.innerHTML = contents;
 }
 
@@ -1573,40 +1656,50 @@ console.warn("ENTRY", i, entries[i], row);
 
 \@SERVER: $server
 
+\@\@\@ Digital score
+
 \@\@BEGIN: ENTRY
-\@GROUP:
+\@GROUP: Digital score
 \@FILE: {ID}.krn
 \@DESCRIPTION: Humdrum digital score
 \@\@END:   ENTRY
 
+\@\@\@ Data conversions
+
 \@\@BEGIN: ENTRY
-\@GROUP: Conversions
-\@FILE: {ID}.musicxml
-\@DESCRIPTION: MusicXML conversion of digital score
+\@GROUP: Data conversions
+\@FILE: {ID}.mds
+\@DESCRIPTION: MuseData conversion of digital score
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Conversions
+\@GROUP: Data conversions
 \@FILE: {ID}.mei
 \@DESCRIPTION: MEI conversion of digital score
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Conversions
-\@FILE: {ID}.mp3
-\@DESCRIPTION: MP3 rendering of score (from MIDI file)
+\@GROUP: Data conversions
+\@FILE: {ID}.musicxml
+\@DESCRIPTION: MusicXML conversion of digital score
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Conversions
+\@GROUP: Data conversions
 \@FILE: {ID}.mid
 \@DESCRIPTION: MIDI digital score
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Conversions
+\@GROUP: Data conversions
 \@FILE: {ID}-timemap.json
 \@DESCRIPTION: Timemap extracted MIDI digital score (used for MP3 playback highlighting)
+\@\@END:   ENTRY
+
+\@\@BEGIN: ENTRY
+\@GROUP: Data conversions
+\@FILE: {ID}.mp3
+\@DESCRIPTION: MP3 rendering of score (from MIDI file)
 \@\@END:   ENTRY
 
 \@\@\@ Notation
@@ -1617,28 +1710,28 @@ console.warn("ENTRY", i, entries[i], row);
 \@DESCRIPTION: First line of rendered music as an SVG image
 \@\@END:   ENTRY
 
-\@\@\@ Pitch-range plots
+\@\@\@ Pitch-range histograms
 
 \@\@BEGIN: ENTRY
-\@GROUP: Pitch-range analyses
+\@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.svg
 \@DESCRIPTION: Pitch ranges by note attacks for voices in score, as and SVG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Pitch-range analyses
+\@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.pmx
 \@DESCRIPTION: Pitch ranges by note attacks for voices in score, as input PMX for SCORE
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Pitch-range analyses
+\@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-duration.svg
 \@DESCRIPTION: Pitch ranges by note durations for voices in score, as and SVG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
-\@GROUP: Pitch-range analyses
+\@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.pmx
 \@DESCRIPTION: Pitch ranges by note durations for voices in score, as input PMX for SCORE
 \@\@END:   ENTRY
