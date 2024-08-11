@@ -1564,7 +1564,7 @@ table tr td:first-child { white-space: nowrap; }
 table td { vertical-align: top; padding-right: 10px; }
 table tr.group td { font-size: 1.15rem; font-weight: bold; padding-top: 10px; }
 table tr.group td::after { content: ":"; }
-table tr:hover { background-color: #fcfcfc; }
+table tr:hover { background-color: #f0f0f0; }
 a { color: #00e; text-decoration: none }
 a:visited { color: #00e; text-decoration: none; }
 a b { color: purple; }
@@ -1623,7 +1623,7 @@ function displaySelectedId() {
 		   contents += `<tr class='group'><td colspan='2'>\${thisGroup}</td></tr>\\n`;
 			group = thisGroup;
 		}
-		let fileTemplate = entries[i].FILE;
+		let fileTemplate = `https://\${server}/\${entries[i].FILE}`;
 		let fileUrl = fileTemplate.replace(/\{ID\}/g, id);
 		let fileText = fileTemplate.replace(/\{ID\}/g, `<b>\${id}</b>`);
 		let description = entries[i].DESCRIPTION;
@@ -1715,25 +1715,25 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.svg
-\@DESCRIPTION: Pitch ranges by note attacks for voices in score, as and SVG image
+\@DESCRIPTION: Pitch range by note attacks for voices in score, as and SVG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.pmx
-\@DESCRIPTION: Pitch ranges by note attacks for voices in score, as input PMX for SCORE
+\@DESCRIPTION: Pitch range by note attacks for voices in score, as input PMX for SCORE
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-duration.svg
-\@DESCRIPTION: Pitch ranges by note durations for voices in score, as and SVG image
+\@DESCRIPTION: Pitch range by note durations for voices in score, as and SVG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.pmx
-\@DESCRIPTION: Pitch ranges by note durations for voices in score, as input PMX for SCORE
+\@DESCRIPTION: Pitch range by note durations for voices in score, as input PMX for SCORE
 \@\@END:   ENTRY
 
 \@\@\@ Activity plots
@@ -1741,52 +1741,52 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged.png
-\@DESCRIPTION: Activity plots, merged voice counts, PNG image
+\@DESCRIPTION: Activity plot, merged voice counts, PNG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged.gnuplot
-\@DESCRIPTION: Activity plots, merged voice counts, GNUPLOT source file
+\@DESCRIPTION: Activity plot, merged voice counts, GNUPLOT source file
 \@\@END:   ENTRY
 
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-separate.png
-\@DESCRIPTION: Activity plots, separate voice counts, PNG image
+\@DESCRIPTION: Activity plot, separate voice counts, PNG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-separate.gnuplot
-\@DESCRIPTION: Activity plots, separate voice counts, GNUPLOT source file
+\@DESCRIPTION: Activity plot, separate voice counts, GNUPLOT source file
 \@\@END:   ENTRY
 
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged-notitle.png
-\@DESCRIPTION: Activity plots, merged voice counts, no title, PNG image
+\@DESCRIPTION: Activity plot, merged voice counts, no title, PNG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged-notitle.gnuplot
-\@DESCRIPTION: Activity plots, merged voice counts, no title, GNUPLOT source file
+\@DESCRIPTION: Activity plot, merged voice counts, no title, GNUPLOT source file
 \@\@END:   ENTRY
 
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-separate-notitle.png
-\@DESCRIPTION: Activity plots, separate voice counts, no title, PNG image
+\@DESCRIPTION: Activity plot, separate voice counts, no title, PNG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-separate-notitle.gnuplot
-\@DESCRIPTION: Activity plots, separate voice counts, no title, GNUPLOT source file
+\@DESCRIPTION: Activity plot, separate voice counts, no title, GNUPLOT source file
 \@\@END:   ENTRY
 
 \@\@\@ Keyscapes
@@ -1794,25 +1794,25 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-abspre.png
-\@DESCRIPTION: Keyscape, absolute colors, preprocessed
+\@DESCRIPTION: Keyscape plot, absolute colors, preprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-relpre.png
-\@DESCRIPTION: Keyscape, relative colors, preprocessed
+\@DESCRIPTION: Keyscape plot, relative colors, preprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-abspost.png
-\@DESCRIPTION: Keyscape, absolute colors, postprocessed
+\@DESCRIPTION: Keyscape plot, absolute colors, postprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-relpost.png
-\@DESCRIPTION: Keyscape, relative colors, postprocessed
+\@DESCRIPTION: Keyscape plot, relative colors, postprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
