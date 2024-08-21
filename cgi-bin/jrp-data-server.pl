@@ -1553,26 +1553,51 @@ sub printInfoPage {
 
 <h1>Data API for $server</h1>
 
-<p>Choose and example ID:
+<p>Choose an example ID:
 <select id="select-id" onchange="displaySelectedId()">$options</select>
+<input type="checkbox" id="visual" onclick="displaySelectedId()"> Display visual resources
+<button id="random" onclick="displayRandomId()">Random</button>
+
 </p>
 
+<hr noshade>
+
 <style>
-body { font-size: 1rem; }
+body { font-size: 1rem; margin-left: 20px; margin-bottom: 100px; }
 table { border-collapse: collapse; }
 table tr td:first-child { white-space: nowrap; }
 table td { vertical-align: top; padding-right: 10px; }
 table tr.group td { font-size: 1.15rem; font-weight: bold; padding-top: 10px; }
 table tr.group td::after { content: ":"; }
-table tr:hover { background-color: #f0f0f0; }
+table tr.resource:hover { background-color: #f0f0f0; }
 a { color: #00e; text-decoration: none }
 a:visited { color: #00e; text-decoration: none; }
 a b { color: purple; }
+img { max-width:600px; max-height:250px; margin-left:50px; }
+audio { margin-left:50px; width:400px; }
+#random {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+#random:hover {
+    background-color: red;
+    color: white;
+    border-color: red;
+}
 </style>
 
 <script>
 
 var TEMPLATE = {};
+
+
+//////////////////////////////
+//
+// DOMContentLoaded listener -- Run when webpage is loaded.
+//
 
 document.addEventListener("DOMContentLoaded", function () {
 	let aton = new ATON;
@@ -1581,9 +1606,31 @@ document.addEventListener("DOMContentLoaded", function () {
 	displaySelectedId();
 });
 
+
+//////////////////////////////
+//
+// displayRandomId -- choose a random ID to display.
+//
+
+function displayRandomId() {
+    var selectElement = document.getElementById("select-id");
+    var options = selectElement.options;
+    var randomIndex = Math.floor(Math.random() * options.length);
+    selectElement.selectedIndex = randomIndex;
+    displaySelectedId();
+}
+
+
+
+//////////////////////////////
+//
+// displaySelectedId -- Display resource links for selected ID.
+//
+
 function displaySelectedId() {
 	const server = "$server";
 	let id = document.querySelector("select#select-id").value;
+	let visualQ = document.querySelector("input#visual").checked;
 	let contents = "";
 
 	contents += "<ul>\\n";
@@ -1615,6 +1662,7 @@ function displaySelectedId() {
 
 	contents += "<table>";
 
+
 	let group = "";
 	let entries = TEMPLATE.ENTRY;
 	for (let i=0; i<entries.length; i++) {
@@ -1628,7 +1676,7 @@ function displaySelectedId() {
 		let fileText = fileTemplate.replace(/\{ID\}/g, `<b>\${id}</b>`);
 		let description = entries[i].DESCRIPTION;
 		let row = "";
-		row += "<tr>";
+		row += "<tr class='resource'>";
 		row += "<td>";
 		row += `<a target="_blank" href="\${fileUrl}">\${fileText}</a>`;
 		row += "</td>";
@@ -1636,8 +1684,24 @@ function displaySelectedId() {
 		row += description;
 		row += "</td>";
 		row += "</tr>\\n";
-		// console.warn("ENTRY", i, entries[i], row);
 		contents += row;
+
+		// Add images if necessary
+		if (visualQ && (entries[i].VISUAL === "image")) {
+			let row = "<tr class='image'><td colspan='2'>";
+			row += `<a target="_blank" href="\${fileUrl}">`;
+			row += `<img src='\${fileUrl}'>`;
+			row += "</a>";
+			row += "</td></tr>\\n";
+			contents += row;
+		} else if (visualQ && (entries[i].VISUAL === "audio")) {
+			let row = "<tr class='audio'><td colspan='2'>";
+			row += "<audio controls preload='metadata'>";
+			row += `<source src="\${fileUrl}" type="audio/mpeg">`;
+			row += "</audio>";
+			row += "</td></tr>\\n";
+			contents += row;
+		}
 	}
 
 	contents += "</table>";
@@ -1699,6 +1763,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Data conversions
 \@FILE: {ID}.mp3
+\@VISUAL: audio
 \@DESCRIPTION: MP3 rendering of score (from MIDI file)
 \@\@END:   ENTRY
 
@@ -1707,6 +1772,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Notation
 \@FILE: {ID}-incipit.svg
+\@VISUAL: image
 \@DESCRIPTION: First line of rendered music as an SVG image
 \@\@END:   ENTRY
 
@@ -1715,6 +1781,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-attack.svg
+\@VISUAL: image
 \@DESCRIPTION: Pitch range by note attacks for voices in score, as and SVG image
 \@\@END:   ENTRY
 
@@ -1727,6 +1794,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Pitch-range histograms
 \@FILE: {ID}-prange-duration.svg
+\@VISUAL: image
 \@DESCRIPTION: Pitch range by note durations for voices in score, as and SVG image
 \@\@END:   ENTRY
 
@@ -1741,6 +1809,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged.png
+\@VISUAL: image
 \@DESCRIPTION: Activity plot, merged voice counts, PNG image
 \@\@END:   ENTRY
 
@@ -1754,6 +1823,7 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-separate.png
+\@VISUAL: image
 \@DESCRIPTION: Activity plot, separate voice counts, PNG image
 \@\@END:   ENTRY
 
@@ -1767,20 +1837,22 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
 \@FILE: {ID}-activity-merged-notitle.png
+\@VISUAL: image
 \@DESCRIPTION: Activity plot, merged voice counts, no title, PNG image
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
-\@FILE: {ID}-activity-merged-notitle.gnuplot
-\@DESCRIPTION: Activity plot, merged voice counts, no title, GNUPLOT source file
+\@FILE: {ID}-activity-separate-notitle.png
+\@VISUAL: image
+\@DESCRIPTION: Activity plot, separate voice counts, no title, PNG image
 \@\@END:   ENTRY
 
 
 \@\@BEGIN: ENTRY
 \@GROUP: Activity plots
-\@FILE: {ID}-activity-separate-notitle.png
-\@DESCRIPTION: Activity plot, separate voice counts, no title, PNG image
+\@FILE: {ID}-activity-merged-notitle.gnuplot
+\@DESCRIPTION: Activity plot, merged voice counts, no title, GNUPLOT source file
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
@@ -1794,24 +1866,28 @@ function displaySelectedId() {
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-abspre.png
+\@VISUAL: image
 \@DESCRIPTION: Keyscape plot, absolute colors, preprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-relpre.png
+\@VISUAL: image
 \@DESCRIPTION: Keyscape plot, relative colors, preprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-abspost.png
+\@VISUAL: image
 \@DESCRIPTION: Keyscape plot, absolute colors, postprocessed
 \@\@END:   ENTRY
 
 \@\@BEGIN: ENTRY
 \@GROUP: Keyscape plots
 \@FILE: {ID}-keyscape-relpost.png
+\@VISUAL: image
 \@DESCRIPTION: Keyscape plot, relative colors, postprocessed
 \@\@END:   ENTRY
 

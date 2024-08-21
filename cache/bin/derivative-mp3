@@ -55,7 +55,30 @@ if (($lame =~ /^\s*$/) and (-r "/usr/bin/lame")) {
 die "ERROR: Cannot locate lame command\n" if $lame =~ /^\s*$/;
 
 print STDERR "Creating $outputfile ...";
-my $command = "$timidity $inputfile -Ow -o - | lame -V2 - > $outputfile";
+
+# Lame options:
+#   --preset standard  This is a common setting for VBR (Variable Bitrate)
+#                      encoding that balances quality and file size. You can
+#                      replace this with a different preset or specify a bitrate
+#                      if needed.
+#   --id3v2-only       This ensures that only ID3v2 tags are written, which are
+#                      more comprehensive and modern compared to ID3v1 tags.
+#                      ID3v2 tags are more widely supported for metadata such as
+#                      duration.
+#   --add-id3v2        This explicitly tells LAME to add an ID3v2 tag to the file,
+#                      even if you’re also adding an ID3v1 tag.
+#                      o
+#   --tt "Track Title"
+#   --ta "Artist Name"
+#   --tl "Album Name"
+#
+#   Avoiding pipes (which cause problems creating a header):
+#   your_command | tee temp.wav | lame - output.mp3
+#   rm temp.wav
+#
+
+my $lameOptions = " --preset standard --id3v2-only --add-id3v2 ";
+my $command = "$timidity $inputfile -Ow -o temp.wav; lame -V2 $lameOptions temp.wav $outputfile; rm -f temp.wav";
 my $output = `$command`;
 print STDERR " Done.\n";
 # print STDERR "\t$command\n";
