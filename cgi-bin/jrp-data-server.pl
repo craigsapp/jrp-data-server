@@ -922,18 +922,84 @@ sub sendTimemapContent {
 ## sendMp3Content -- (Static content) Send MP3 conversion of MIDI data.
 ##
 
-sub sendMp3Content {
-	my ($md5) = @_;
-	my $cdir = getCacheSubdir($md5, $cacheDepth);
-	my $format = "mp3";
-	my $mime = "audio/mpeg";
+##############################
+##
+## sendMp3Content -- (Static content) Send MP3 conversion of MIDI data.
+##
 
-	my $data = `cat "$cachedir/$cdir/$md5.$format"`;
-	print "Content-Type: $mime$newline";
-	print "Content-Disposition: inline; filename=\"$ID.mp3\"$newline";
-	print "$newline";
-	print $data;
-	exit(0);
+sub sendMp3Content {
+    my ($md5) = @_;
+    my $cdir = getCacheSubdir($md5, $cacheDepth);
+    my $format = "mp3";
+    my $mime = "audio/mpeg";
+    my $filepath = "$cachedir/$cdir/$md5.$format";
+
+    if (!-r $filepath) {
+        errorMessage("MP3 file not found for ID: $md5");
+    }
+
+    # Get the size of the MP3 file
+    my $filesize = -s $filepath;
+
+    # Check for the Range header
+    my $range = $ENV{'HTTP_RANGE'};
+    if ($range && $range =~ /^bytes=(\d*)-(\d*)$/) {
+        # Parse the start and end of the requested range
+        my ($start, $end) = ($1, $2);
+
+        # Set default values if they are not provided
+        $start = 0 unless defined $start && $start ne '';
+        $end = $filesize - 1 unless defined $end && $end ne '';
+
+        # Ensure that the requested range is valid
+        if ($start > $end || $end >= $filesize) {
+            print "Status: 416 Range Not Satisfiable$newline";
+            print "Content-Range: bytes */$filesize$newline";
+            print "$newline";
+            exit(0);
+        }
+
+        # Calculate the length of the content to send
+        my $length = $end - $start + 1;
+
+        # Send the partial content response
+        print "Status: 206 Partial Content$newline";
+        print "Content-Type: $mime$newline";
+        print "Cache-Control: no-cache, no-store, must-revalidate, public, max-age=0$newline";
+        print "Accept-Ranges: bytes$newline";
+        print "Content-Range: bytes $start-$end/$filesize$newline";
+        print "Content-Length: $length$newline";
+        print "Content-Disposition: inline; filename=\"$ID.mp3\"$newline";
+        print "$newline";
+
+        # Open the file and send the requested byte range
+        open my $fh, '<', $filepath or errorMessage("Unable to open MP3 file");
+        binmode $fh;
+        seek($fh, $start, 0);
+        read($fh, my $buffer, $length);
+        print $buffer;
+        close $fh;
+
+    } else {
+        # No Range header: send the entire file with a 200 OK response
+        print "Status: 200 OK$newline";
+        print "Content-Type: $mime$newline";
+        print "Cache-Control: no-cache, no-store, must-revalidate, public, max-age=0$newline";
+        print "Accept-Ranges: bytes$newline";
+        print "Content-Length: $filesize$newline";
+        print "Content-Disposition: inline; filename=\"$ID.mp3\"$newline";
+        print "$newline";
+
+        # Send the entire file
+        open my $fh, '<', $filepath or errorMessage("Unable to open MP3 file");
+        binmode $fh;
+        while (read($fh, my $buffer, 4096)) {
+            print $buffer;
+        }
+        close $fh;
+    }
+
+    exit(0);
 }
 
 

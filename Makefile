@@ -25,6 +25,7 @@
 # files.
 KERNREPOS =  ../jrp-scores ../1520s-project-scores/humdrum ../tasso-scores
 
+
 # TARGETDIR: The directory into which symbolic links to Humdrum files in the
 # KERNREPOS directory list are located.
 TARGETDIR = kern
@@ -69,13 +70,13 @@ all:
 un: update-nohup
 nu: update-nohup
 nohup-update: update-nohup
-update-nohup: kern
+update-nohup: pull kern
 	nohup make update >& nohup.out &
 	@echo Saving processing text in nohup.out.
 	# https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 	@echo -e "\033[31mType \"tail -f nohup.out\" to monitor progress in realtime.\033[0m"
 
-update: kern
+update: pull kern
 	(cd cache; make update)
 
 
@@ -123,6 +124,19 @@ endif
 ifdef CHCON
 	chcon system_u:object_r:httpd_exec_t:s0 bin/lyrics
 endif
+
+
+
+##############################
+##
+## pull: Get the latest version of the repositories.
+##
+
+pull:
+	for repo in $(KERNREPOS);     \
+	do                            \
+		(cd $$repo && git pull);   \
+	done
 
 
 

@@ -1,8 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Programmer:    Craig Stuart Sapp <craig.stanford.edu>
 # Creation Date: Sat Dec 16 10:50:37 AM PST 2023
-# Last Modified: Sat Dec 16 10:50:40 AM PST 2023
+# Last Modified: Mon Sep 30 03:49:17 PM PDT 2024
 # Filename:      cache/bin/derivative-mp3
 # Syntax:        perl 5
 # vim:           ts=3
@@ -10,7 +10,7 @@
 # Description:   Create MP3 file from MIDI file.
 #
 # Options:
-#     -f   == Force recalculation of derivative files (overwrite).
+#      -f   == Force recalculation of derivative files (overwrite).
 #
 
 use strict;
@@ -30,7 +30,6 @@ die "Invalid MD5 value: $md5id\n" if $md5id !~ /^[0-9a-f]{8}$/;
 
 my $inputfile = "$md5id.mid";
 my $outputfile = "$md5id.mp3";
-
 
 die "ERROR: Cannot find input file $inputfile\n" if !-r $inputfile;
 
@@ -67,7 +66,8 @@ print STDERR "Creating $outputfile ...";
 #                      duration.
 #   --add-id3v2        This explicitly tells LAME to add an ID3v2 tag to the file,
 #                      even if you’re also adding an ID3v1 tag.
-#                      o
+#
+# Options that can be used in the future to encode information about the music:
 #   --tt "Track Title"
 #   --ta "Artist Name"
 #   --tl "Album Name"
@@ -76,13 +76,35 @@ print STDERR "Creating $outputfile ...";
 #   your_command | tee temp.wav | lame - output.mp3
 #   rm temp.wav
 #
+#
+# Variable bitrate for the -V option (lower number is higher quality compression):
+# LAME Option (-V)    Average Bit Rate (kbps)
+# -V0                ~245
+# -V1                ~225
+# -V2                ~190
+# -V3                ~175
+# -V4                ~165
+# -V5                ~130
+# -V6                ~115
+# -V7                ~100
+# -V8                ~85
+# -V9                ~65
 
-my $lameOptions = " --preset standard --id3v2-only --add-id3v2 ";
-my $command = "$timidity $inputfile -Ow -o temp.wav; lame -V2 $lameOptions temp.wav $outputfile; rm -f temp.wav";
-my $output = `$command`;
+#my $lameOptions = " -V2 --id3v2-only --add-id3v2 ";
+# for Constant bitrate encoding (works better for random access):
+my $lameOptions = " --cbr -b 192 --id3v2-only --add-id3v2 ";
+
+my $command = "$timidity $inputfile -Ow -o temp.wav";
+$command .= "; lame $lameOptions temp.wav $outputfile; rm -f temp.wav";
+my $output = `$command 2>&1`;
+
+# Check for errors in the output:
+if ($? != 0) {
+	print STDERR " Error during encoding: $output\n";
+	die;
+}
+
 print STDERR " Done.\n";
-# print STDERR "\t$command\n";
-
 
 
 

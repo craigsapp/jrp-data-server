@@ -81,7 +81,10 @@ sub prepareEntry {
 	$composer = $references{"COA1"} if $composer =~ /^\s*$/;
 	$composer = $references{"COS"} if $composer =~ /^\s*$/;
 	$composer = $references{"COS1"} if $composer =~ /^\s*$/;
-	die "No composer field in file $kernfile\n" if $composer =~ /^\s*$/;
+	# die "No composer field in file $kernfile\n" if $composer =~ /^\s*$/;
+	if ($composer =~ /^\s*$/) {
+		$composer = "Anonymous";
+	}
 
 	# my $title = "";
 	my $GTL = $references{"GTL"};
