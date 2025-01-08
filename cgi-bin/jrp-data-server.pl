@@ -77,7 +77,7 @@ use strict;
 ##
 
 chomp(my $extractx = `which extractx`);
-chomp(my $ridx = `which ridx`);
+chomp(my $ridx = `which ridxx`);
 
 errorMessage("Cannot find extractx") if $extractx =~ /^\s*$/;
 errorMessage("Cannot find ridx") if $ridx =~ /^\s*$/;
@@ -1619,6 +1619,11 @@ sub printInfoPage {
 
 <h1>Data API for $server</h1>
 
+
+
+
+<hr noshade>
+
 <p>Choose an example ID:
 <select id="select-id" onchange="displaySelectedId()">$options</select>
 <input type="checkbox" id="visual" onclick="displaySelectedId()"> Display visual resources
@@ -1626,7 +1631,6 @@ sub printInfoPage {
 
 </p>
 
-<hr noshade>
 
 <style>
 body { font-size: 1rem; margin-left: 20px; margin-bottom: 100px; }
